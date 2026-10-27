@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smoke Studies · 3D volume</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+</head>
+<body>
+<main>
+  <a class="back" href="./">← Smoke Studies</a>
+  <h1 class="sr-only">Unbounded 3D stylized smoke sandbox: particles move freely in 3D space while each frame is projected to the screen and shaded with the 2D hand-drawn rules (flat bands, hue shift, age tint, ambient occlusion, ember glow). Orbit, pan and zoom the camera and draw anywhere.</h1>
+
+  <div style="position: relative; margin-top: 0.5rem">
+    <canvas id="gl" style="width: 100%; height: 440px; display: block; border-radius: 12px; touch-action: none; cursor: grab; background: #1a1d21"></canvas>
+    <div id="tip" class="tip" style="bottom: 10px; color: rgba(255, 255, 255, 0.72)"></div>
+    <div id="nogl" class="notice">This study needs WebGL2.</div>
+  </div>
+
+  <div class="toolbar" style="margin-bottom: 8px">
+    <button data-v="orbit">Orbit</button><button data-v="draw">Draw</button>
+    <span class="divider"></span>
+    <button data-mode="brush">Brush</button><button data-mode="livingStroke">Living stroke</button>
+    <span class="spacer"></span>
+    <button id="clr"><i class="ti ti-eraser" aria-hidden="true"></i> Clear</button>
+  </div>
+  <div class="toolbar" style="margin: 0 0 8px">
+    <span class="section-label">Renderer</span>
+    <button data-r="screen" title="Particles splatted to a screen grid and shaded with the 2D rules">Screen-space</button><button data-r="volume" title="Particles splatted to a fitted voxel grid and ray-marched">Volume</button>
+  </div>
+  <div id="sws" class="toolbar" style="gap: 6px; margin: 0 0 8px"><span class="section-label" style="margin-right: 4px">Color</span></div>
+  <div id="saves" class="section"></div>
+  <div id="layers" class="section layers"></div>
+  <div id="sliders" class="sliders"></div>
+  <div id="style-panel"></div>
+</main>
+<script type="module" src="../src/apps/volume-3d.js"></script>
+</body>
+</html>

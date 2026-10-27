@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smoke Studies · 2.5D cards</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+</head>
+<body>
+<main>
+  <a class="back" href="./">← Smoke Studies</a>
+  <h1 class="sr-only">2.5D smoke drawing: each stroke lives on a 2D fluid card placed in 3D space. Rotate the space with Shift + drag and draw again to create a new card facing the new view; cards keep their own position and orientation.</h1>
+
+  <div id="stage" style="position: relative; margin-top: 0.5rem; background: #1a1d21; border-radius: 12px; overflow: hidden; aspect-ratio: 3 / 2; touch-action: none">
+    <div id="space" style="position: absolute; inset: 0; perspective: 1100px; perspective-origin: 50% 50%; cursor: crosshair">
+      <div id="world" style="position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d"></div>
+    </div>
+    <div class="tip">Drag to draw · Shift + drag to rotate the space · Double-click to face the front</div>
+  </div>
+
+  <div class="toolbar">
+    <button data-mode="brush">Brush</button><button data-mode="livingStroke">Living stroke</button>
+    <span class="divider"></span>
+    <button data-cm="all" title="Picking a color repaints all smoke">Recolor all</button><button data-cm="next" title="Picking a color only affects the next stroke">Next stroke only</button>
+    <span id="pc" class="hint" style="min-width: 120px"></span>
+    <button id="clr"><i class="ti ti-eraser" aria-hidden="true"></i> Clear</button>
+  </div>
+  <div class="section" style="gap: 8px 16px">
+    <div class="slider" style="flex: 1; min-width: 240px">
+      <label for="dp">Draw depth</label>
+      <input type="range" id="dp" min="-300" max="300" step="50" value="0">
+      <output id="dpo" for="dp" style="min-width: 56px">0 px</output>
+    </div>
+  </div>
+  <div id="saves" class="section"></div>
+  <div id="layers" class="section layers"></div>
+  <div id="sliders" class="sliders"></div>
+  <div id="style-panel"></div>
+</main>
+<script type="module" src="../src/apps/cards-2_5d.js"></script>
+</body>
+</html>

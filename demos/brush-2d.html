@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Smoke Studies · 2D brush</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+</head>
+<body>
+<main>
+  <a class="back" href="./">← Smoke Studies</a>
+  <h1 class="sr-only">Stylized smoke drawing tool with hue-shift shading, layered look, and soft drifting embers; brush and living-stroke modes, color palette with history and saved effects.</h1>
+
+  <div style="position: relative; margin-top: 0.5rem">
+    <canvas id="c" width="480" height="320" style="width: 100%; display: block; border-radius: 12px; cursor: crosshair; touch-action: none"></canvas>
+  </div>
+
+  <div class="toolbar">
+    <button data-mode="brush">Brush</button><button data-mode="livingStroke">Living stroke</button>
+    <span id="hint" class="hint"></span>
+    <button id="clr"><i class="ti ti-eraser" aria-hidden="true"></i> Clear</button>
+  </div>
+  <div id="saves" class="section"></div>
+  <div id="layers" class="section layers"></div>
+  <div id="sliders" class="sliders"></div>
+  <div id="style-panel"></div>
+</main>
+<script type="module" src="../src/apps/brush-2d.js"></script>
+</body>
+</html>
