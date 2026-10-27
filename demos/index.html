@@ -5,55 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Smoke Studies</title>
   <meta name="description" content="Stylized smoke drawing studies in 2D, 2.5D and 3D, driven by one renderer-agnostic Style JSON.">
-  <link rel="stylesheet" href="../src/ui/theme.css">
-  <style>
-    header { margin: 24px 0 20px; }
-    h1 { font-size: 28px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.01em; }
-    .lede { font-size: 16px; line-height: 1.55; color: var(--text-secondary); margin: 0; max-width: 60ch; }
-    .studies { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
-    .study { display: grid; grid-template-columns: 56px 1fr; gap: 4px 16px; align-items: start; padding: 16px; border: 0.5px solid var(--border-strong); border-radius: 12px; color: inherit; text-decoration: none; }
-    .study:hover { background: var(--surface-1); }
-    .num { grid-row: span 2; font-size: 13px; font-family: var(--font-mono); color: var(--text-muted); padding-top: 3px; }
-    .study h2 { font-size: 17px; font-weight: 600; margin: 0; }
-    .study p { font-size: 14px; line-height: 1.5; color: var(--text-secondary); margin: 0; }
-    .study .reads { color: var(--text-accent); }
-    footer { margin: 28px 0 8px; font-size: 13px; line-height: 1.6; color: var(--text-muted); }
-  </style>
 </head>
-<body>
-<main>
-  <header>
-    <h1>Smoke Studies</h1>
-    <p class="lede">Hand-drawn style smoke you can paint with, in the spirit of the 2D effects in Arcane. The same simulation rules and the same Style JSON drive three studies; only the number of dimensions changes, and with it the material the smoke seems to be made of.</p>
-  </header>
-
-  <ul class="studies">
-    <li>
-      <a class="study" href="brush-2d.html">
-        <span class="num">01 · 2D</span>
-        <h2>Brush</h2>
-        <p>One stable-fluids grid over the whole window, toon shaded on the GPU: flat bands, hue-shifted shadows, age tint, mottle and drifting embers. <span class="reads">Reads as smoke.</span></p>
-      </a>
-    </li>
-    <li>
-      <a class="study" href="cards-2_5d.html">
-        <span class="num">02 · 2.5D</span>
-        <h2>Cards</h2>
-        <p>Every stroke is its own 2D fluid card placed in 3D space. Rotate the world and draw again to add depth, the way Arcane composites flat FX layers into a 3D shot. <span class="reads">Still smoke, now with space.</span></p>
-      </a>
-    </li>
-    <li>
-      <a class="study" href="volume-3d.html">
-        <span class="num">03 · 3D</span>
-        <h2>Volume</h2>
-        <p>A GPU smoke fluid you can orbit around, ray-marched as translucent layers with the same hand-drawn bands. The earlier curl-noise particle renderers, which read as liquid, stay behind a switch. <span class="reads">Reads as smoke again.</span></p>
-      </a>
-    </li>
-  </ul>
-
-  <footer>
-    Drawing++ (MIT Media Lab, Fall 2026) · Anyang Zu · <a href="https://github.com/zuanyang0809-droid/smoke-studies">Source on GitHub</a>
-  </footer>
+<body class="home">
+<h1 class="sr-only">Smoke Studies: hand-drawn style smoke in 2D, 2.5D and 3D</h1>
+<main class="tiles">
+  <a class="study" href="brush-2d.html" aria-label="Open the 2D brush study">
+    <span class="tile"><canvas data-tile="2d" aria-hidden="true"></canvas></span>
+    <span class="tile-label">2D</span>
+  </a>
+  <a class="study" href="cards-2_5d.html" aria-label="Open the 2.5D cards study">
+    <span class="tile"><canvas data-tile="2_5d" aria-hidden="true"></canvas></span>
+    <span class="tile-label">2.5D</span>
+  </a>
+  <a class="study" href="volume-3d.html" aria-label="Open the 3D volume study">
+    <span class="tile"><canvas data-tile="3d" aria-hidden="true"></canvas></span>
+    <span class="tile-label">3D</span>
+  </a>
 </main>
+<footer class="home-footer">
+  Smoke Studies · Drawing++, MIT Media Lab, Fall 2026 · Anyang Zu · <a href="https://github.com/zuanyang0809-droid/smoke-studies">GitHub</a>
+</footer>
+<script type="module" src="../src/apps/landing.js"></script>
 </body>
 </html>

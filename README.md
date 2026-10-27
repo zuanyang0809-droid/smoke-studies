@@ -12,7 +12,7 @@ The series grew out of one observation: **dimensionality changes the perceived m
 
 Made for *Drawing++* (Zach Lieberman, MIT Media Lab, Fall 2026), assignment 3, generative nature.
 
-**Live demos:** [zuanyang0809-droid.github.io/smoke-studies](https://zuanyang0809-droid.github.io/smoke-studies/)
+**Live demos:** [zuanyang0809-droid.github.io/smoke-studies](https://zuanyang0809-droid.github.io/smoke-studies/) The landing page shows each study as a small live tile (the real engines at low resolution, puffing every few seconds); click a tile to open it.
 
 ## Run locally
 
