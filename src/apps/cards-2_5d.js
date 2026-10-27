@@ -6,11 +6,13 @@
 
 import '../ui/theme.css';
 import { hexToRgb } from '../core/color.js';
+import { History } from '../core/history.js';
 import { clone, DEFAULT_STYLE } from '../core/style.js';
 import { SmokeLayer2D, layerParamsFromStyle } from '../sim/layer2d.js';
 import { Emitter2D } from '../sim/emitters.js';
 import { gridForViewport } from '../sim/fluid2d.js';
 import { AdaptiveScheduler } from '../sim/scheduler.js';
+import { strokeEntry2D } from '../sim/undo2d.js';
 import { toonLookFromStyle } from '../render/toon2d.js';
 import { ToonRendererGL } from '../render/toon-gl.js';
 import { CardSpace } from '../render/card-space.js';
@@ -114,7 +116,46 @@ const ui = mountStyleUI({
   onLoad: loadStyle,
 });
 
-mountPanel({ undo() {}, redo() {} });
+// Undo / redo, one stroke at a time. Undoing the stroke that created a card
+// removes the card; redo brings it back with the same orientation and depth.
+let stroke = null; // history entry of the stroke being drawn
+const chrome = mountPanel({
+  undo() {
+    up();
+    strokeHistory.undo();
+  },
+  redo() {
+    up();
+    strokeHistory.redo();
+  },
+});
+const strokeHistory = new History(30, () => chrome.syncHistory(strokeHistory));
+chrome.syncHistory(strokeHistory);
+
+/** Show a card's restored or replayed state right away. */
+function refreshCard(card) {
+  if (renderer.ok && cards.cards.includes(card)) renderer.upload(card, look, frame, true);
+  updateCount();
+  redraw = true;
+}
+
+function cardStrokeEntry(card, created, before, p) {
+  const inner = strokeEntry2D(card.layer, emitter, before, p, () => frame);
+  return {
+    record: inner.record,
+    undo() {
+      inner.undo();
+      if (created) cards.removeCard(card);
+      else cards.ensureCard(card); // it may have emptied and been dropped since
+      refreshCard(card);
+    },
+    redo() {
+      cards.ensureCard(card);
+      inner.redo();
+      refreshCard(card);
+    },
+  };
+}
 
 $('dp').oninput = (e) => {
   cards.depth = +e.target.value;
@@ -123,6 +164,7 @@ $('dp').oninput = (e) => {
 
 $('clr').onclick = () => {
   cards.clear();
+  strokeHistory.clear();
   drawCard = null;
   updateCount();
   redraw = true;
@@ -141,6 +183,7 @@ addEventListener('resize', resize);
 // Pointer: Shift + drag tilts the world, plain drag draws on a card.
 function up() {
   emitter.end();
+  stroke = null;
   if (tilt.active) {
     tilt.end();
     canvas.style.cursor = 'crosshair';
@@ -153,16 +196,24 @@ canvas.addEventListener('pointerdown', (e) => {
     canvas.style.cursor = 'grabbing';
     return;
   }
+  const last = cards.cards[cards.cards.length - 1];
   drawCard = cards.pickCard();
   updateCount();
-  emitter.begin(drawCard.layer, cards.toGrid(e.clientX, e.clientY, drawCard), frame);
+  const p = cards.toGrid(e.clientX, e.clientY, drawCard), before = drawCard.layer.fluid.snapshot();
+  emitter.begin(drawCard.layer, p, frame);
+  stroke = cardStrokeEntry(drawCard, drawCard !== last, before, p);
+  strokeHistory.push(stroke);
 });
 canvas.addEventListener('pointermove', (e) => {
   if (e.buttons === 0 && (emitter.down || tilt.active)) return up();
   if (tilt.active) {
     tilt.move(e);
     redraw = true;
-  } else if (emitter.down) emitter.move(cards.toGrid(e.clientX, e.clientY, drawCard), frame);
+  } else if (emitter.down) {
+    const p = cards.toGrid(e.clientX, e.clientY, drawCard);
+    emitter.move(p, frame);
+    stroke.record(p);
+  }
 });
 canvas.addEventListener('pointerup', up);
 canvas.addEventListener('pointercancel', up);

@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_STYLE } from '../src/core/style.js';
 import { Fluid2D, fluidParamsFromStyle, gridForViewport } from '../src/sim/fluid2d.js';
 import { SmokeLayer2D } from '../src/sim/layer2d.js';
-import { replayStroke2D } from '../src/sim/emitters.js';
+import { Emitter2D, replayStroke2D } from '../src/sim/emitters.js';
+import { strokeEntry2D } from '../src/sim/undo2d.js';
 import { AdaptiveScheduler } from '../src/sim/scheduler.js';
 import { emberLook } from '../src/sim/embers.js';
 import { Particles3D, particleParamsFromStyle } from '../src/sim/particles3d.js';
@@ -156,5 +157,45 @@ describe('2D grid helpers', () => {
     layer.removeStroke(stroke);
     expect(layer.strokes).toEqual([]);
     expect(layer.points).toBe(0);
+  });
+});
+
+describe('strokeEntry2D', () => {
+  const drawStroke = (layer, emitter, pts) => {
+    const before = layer.fluid.snapshot();
+    emitter.begin(layer, pts[0], 0);
+    const entry = strokeEntry2D(layer, emitter, before, pts[0], () => 0);
+    for (const p of pts.slice(1)) {
+      emitter.move(p, 0);
+      entry.record(p);
+    }
+    emitter.end();
+    return entry;
+  };
+  const pts = [{ x: 30, y: 50 }, { x: 40, y: 48 }, { x: 50, y: 45 }];
+
+  it('brush: undo restores the fluid, redo draws the stroke again', () => {
+    const layer = new SmokeLayer2D({ trackBounds: true }), emitter = new Emitter2D();
+    const entry = drawStroke(layer, emitter, pts);
+    expect(layer.fluid.hasSmoke()).toBe(true);
+    entry.undo();
+    expect(layer.fluid.hasSmoke()).toBe(false);
+    entry.redo();
+    expect(layer.fluid.hasSmoke()).toBe(true);
+    entry.undo(); // undo after redo goes back to the state before the redo
+    expect(layer.fluid.hasSmoke()).toBe(false);
+  });
+
+  it('living stroke: undo stops it emitting, redo restarts it', () => {
+    const layer = new SmokeLayer2D(), emitter = new Emitter2D();
+    emitter.mode = 'livingStroke';
+    const entry = drawStroke(layer, emitter, pts);
+    const stroke = layer.strokes[0];
+    entry.undo();
+    expect(layer.strokes).toEqual([]);
+    expect(layer.points).toBe(0);
+    entry.redo();
+    expect(layer.strokes).toEqual([stroke]);
+    expect(layer.points).toBe(stroke.length);
   });
 });

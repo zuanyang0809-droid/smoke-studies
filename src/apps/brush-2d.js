@@ -2,10 +2,12 @@
 // the GPU over a background color. Reference behavior: archive/2d/smoke-brush-2d-v10.html.
 
 import '../ui/theme.css';
+import { History } from '../core/history.js';
 import { clone, DEFAULT_STYLE } from '../core/style.js';
 import { SmokeLayer2D, layerParamsFromStyle } from '../sim/layer2d.js';
 import { Emitter2D } from '../sim/emitters.js';
 import { gridForViewport } from '../sim/fluid2d.js';
+import { strokeEntry2D } from '../sim/undo2d.js';
 import { toonLookFromStyle } from '../render/toon2d.js';
 import { ToonRendererGL } from '../render/toon-gl.js';
 import { cardMatrix, PERSPECTIVE } from '../render/card-space.js';
@@ -86,10 +88,27 @@ const ui = mountStyleUI({
   onLoad: loadStyle,
 });
 
-mountPanel({ undo() {}, redo() {} });
+// Undo / redo, one stroke at a time.
+let stroke = null; // history entry of the stroke being drawn
+const afterHistory = () => {
+  if (renderer.ok) renderer.upload(card, look, frame, true);
+};
+const chrome = mountPanel({
+  undo() {
+    endStroke();
+    if (strokeHistory.undo()) afterHistory();
+  },
+  redo() {
+    endStroke();
+    if (strokeHistory.redo()) afterHistory();
+  },
+});
+const strokeHistory = new History(30, () => chrome.syncHistory(strokeHistory));
+chrome.syncHistory(strokeHistory);
 
 $('clr').onclick = () => {
   newLayer();
+  strokeHistory.clear();
   needsUpload = true;
 };
 
@@ -102,13 +121,25 @@ addEventListener('resize', resize);
 
 // Pointer position in grid cells (the grid spans the window).
 const toGrid = (e) => ({ x: (e.clientX / view.width) * card.layer.fluid.nx, y: (e.clientY / view.height) * card.layer.fluid.ny });
+function endStroke() {
+  emitter.end();
+  stroke = null;
+}
 canvas.addEventListener('pointerdown', (e) => {
   canvas.setPointerCapture(e.pointerId);
-  emitter.begin(card.layer, toGrid(e), frame);
+  const p = toGrid(e), before = card.layer.fluid.snapshot();
+  emitter.begin(card.layer, p, frame);
+  stroke = strokeEntry2D(card.layer, emitter, before, p, () => frame);
+  strokeHistory.push(stroke);
 });
-canvas.addEventListener('pointermove', (e) => emitter.move(toGrid(e), frame));
-canvas.addEventListener('pointerup', () => emitter.end());
-canvas.addEventListener('pointercancel', () => emitter.end());
+canvas.addEventListener('pointermove', (e) => {
+  if (!emitter.down) return;
+  const p = toGrid(e);
+  emitter.move(p, frame);
+  stroke.record(p);
+});
+canvas.addEventListener('pointerup', endStroke);
+canvas.addEventListener('pointercancel', endStroke);
 
 function loop() {
   const layer = card.layer;
