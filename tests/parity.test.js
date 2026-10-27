@@ -56,7 +56,8 @@ describe('2D brush vs archive/2d/smoke-brush-2d-v10.html', () => {
       const [{ SmokeLayer2D, layerParamsFromStyle }, { Emitter2D }, { ToonRenderer2D, toonLookFromStyle }] = await importModules(SEED, [
         '../src/sim/layer2d.js', '../src/sim/emitters.js', '../src/render/toon2d.js',
       ]);
-      const style = mergeStyle(DEFAULT_STYLE, { emission: { mode } });
+      // The prototype painted over #1a1d21; the default background is black now.
+      const style = mergeStyle(DEFAULT_STYLE, { emission: { mode }, color: { background: '#1a1d21' } });
       const ctx = fakeContext2D();
       const layer = new SmokeLayer2D({ pressureIterations: 16 });
       const renderer = new ToonRenderer2D({ width: 480, height: 320, getContext: () => ctx }, { cellSize: 3 });

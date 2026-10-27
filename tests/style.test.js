@@ -18,7 +18,7 @@ describe('defaults', () => {
   });
 
   it('match the starting controls of the 2D prototype', () => {
-    expect(DEFAULT_STYLE.color).toEqual({ base: '#8a8f99', hueShift: 20, background: '#1a1d21' });
+    expect(DEFAULT_STYLE.color).toEqual({ base: '#8a8f99', hueShift: 20, background: '#000000' });
     expect(DEFAULT_STYLE.motion).toEqual({ rise: 0.5, curl: 0.4, dissipation: 0.4, agingFrames: 80 });
     expect(DEFAULT_STYLE.form.solidity).toBe(0.4);
     expect(DEFAULT_STYLE.texture).toEqual({ amount: 0.5, mottle: true });
