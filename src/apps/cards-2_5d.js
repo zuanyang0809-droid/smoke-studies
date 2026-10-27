@@ -1,51 +1,61 @@
-// Study 2, 2.5D: every stroke lives on its own 2D fluid card placed in CSS
-// 3D space. Shift + drag rotates the world; drawing after a rotation starts a
-// new card facing the camera. Same simulation and renderer as the 2D study.
+// Study 2, 2.5D: every stroke lives on its own 2D fluid card placed in 3D
+// space. Shift + drag rotates the world (freely, all the way round); drawing
+// after a rotation starts a new card facing the camera. Same simulation and
+// toon rules as the 2D study, all cards drawn by one WebGL canvas.
 // Reference behavior: archive/2d/smoke-brush-2d-v15.html.
 
 import '../ui/theme.css';
-import { hexToRgb, PaletteCache } from '../core/color.js';
+import { hexToRgb } from '../core/color.js';
 import { clone, DEFAULT_STYLE } from '../core/style.js';
 import { SmokeLayer2D, layerParamsFromStyle } from '../sim/layer2d.js';
 import { Emitter2D } from '../sim/emitters.js';
+import { gridForViewport } from '../sim/fluid2d.js';
 import { AdaptiveScheduler } from '../sim/scheduler.js';
 import { toonLookFromStyle } from '../render/toon2d.js';
-import { CardSpace } from '../render/css-cards.js';
+import { ToonRendererGL } from '../render/toon-gl.js';
+import { CardSpace } from '../render/card-space.js';
 import { PalettePanel } from '../ui/palette.js';
 import { mountStyleUI } from '../ui/controls.js';
+import { mountPanel } from '../ui/panel.js';
 import { WorldTilt } from '../ui/tilt.js';
 import { $, toggleGroup } from '../ui/dom.js';
 
-const stage = $('stage'), space = $('space');
+const canvas = $('gl');
+const renderer = new ToonRendererGL(canvas);
+if (!renderer.ok) $('nogl').style.display = 'flex';
 
 let style = clone(DEFAULT_STYLE);
 let params, look, frame = 0;
 let brushRGB = hexToRgb(style.color.base);
 let colorMode = 'all';
 let drawCard = null;
+let redraw = true;
 
-const cache = new PaletteCache(style.color.hueShift);
 const emitter = new Emitter2D();
 const scheduler = new AdaptiveScheduler({ budgetMs: 12, maxSkip: 2 });
+// Cards share one grid size with the window's aspect, chosen at load.
+const grid = gridForViewport(innerWidth, innerHeight);
 const cards = new CardSpace({
-  stage,
-  world: $('world'),
-  width: 480,
-  height: 320,
+  width: grid.nx * 3,
+  height: grid.ny * 3,
   // Cards carry per-cell color and only simulate the region that holds smoke.
-  createLayer: () => new SmokeLayer2D({ color: true, rgb: brushRGB, trackBounds: true, pressureIterations: 14 }),
+  createLayer: () => new SmokeLayer2D({ nx: grid.nx, ny: grid.ny, color: true, rgb: brushRGB, trackBounds: true, pressureIterations: 14 }),
+  onRemove: (c) => renderer.release(c),
 });
 const tilt = new WorldTilt(cards);
+const view = { width: innerWidth, height: innerHeight, perspective: cards.perspective };
 
 function applyStyle() {
   params = layerParamsFromStyle(style);
-  look = toonLookFromStyle(style, cache);
+  look = toonLookFromStyle(style);
   emitter.mode = style.emission.mode;
+  uploadAll();
 }
 
-/** Idle cards are not redrawn by the loop, so redraw them after a style edit. */
-function renderIdle() {
-  for (const c of cards.cards) if (!c.layer.active) c.renderer.render(c.layer, look, frame);
+/** Idle cards are not re-uploaded by the loop, so refresh them after a style or color edit. */
+function uploadAll() {
+  if (renderer.ok) for (const c of cards.cards) renderer.upload(c, look, frame);
+  redraw = true;
 }
 
 function updateCount() {
@@ -63,7 +73,7 @@ function recolorAll() {
   }
 }
 
-const palette = new PalettePanel(stage, {
+const palette = new PalettePanel($('palette'), {
   onChange(hex) {
     style.color.base = hex;
     brushRGB = hexToRgb(hex);
@@ -71,7 +81,6 @@ const palette = new PalettePanel(stage, {
     if (colorMode === 'all') recolorAll();
     applyStyle();
     ui.refresh();
-    renderIdle();
   },
 });
 
@@ -101,10 +110,11 @@ const ui = mountStyleUI({
   onChange() {
     applyStyle();
     ui.refresh();
-    renderIdle();
   },
   onLoad: loadStyle,
 });
+
+mountPanel({ undo() {}, redo() {} });
 
 $('dp').oninput = (e) => {
   cards.depth = +e.target.value;
@@ -115,37 +125,49 @@ $('clr').onclick = () => {
   cards.clear();
   drawCard = null;
   updateCount();
+  redraw = true;
 };
+
+function resize() {
+  cards.setViewport(innerWidth, innerHeight);
+  view.width = innerWidth;
+  view.height = innerHeight;
+  view.perspective = cards.perspective;
+  renderer.resize(innerWidth, innerHeight);
+  redraw = true;
+}
+addEventListener('resize', resize);
 
 // Pointer: Shift + drag tilts the world, plain drag draws on a card.
 function up() {
   emitter.end();
   if (tilt.active) {
     tilt.end();
-    space.style.cursor = 'crosshair';
+    canvas.style.cursor = 'crosshair';
   }
 }
-space.addEventListener('pointerdown', (e) => {
-  palette.close();
-  space.setPointerCapture(e.pointerId);
+canvas.addEventListener('pointerdown', (e) => {
+  canvas.setPointerCapture(e.pointerId);
   if (e.shiftKey) {
     tilt.begin(e);
-    space.style.cursor = 'grabbing';
+    canvas.style.cursor = 'grabbing';
     return;
   }
   drawCard = cards.pickCard();
   updateCount();
-  emitter.begin(drawCard.layer, cards.toGrid(e, drawCard), frame);
+  emitter.begin(drawCard.layer, cards.toGrid(e.clientX, e.clientY, drawCard), frame);
 });
-space.addEventListener('pointermove', (e) => {
+canvas.addEventListener('pointermove', (e) => {
   if (e.buttons === 0 && (emitter.down || tilt.active)) return up();
-  if (tilt.active) return tilt.move(e);
-  if (emitter.down) emitter.move(cards.toGrid(e, drawCard), frame);
+  if (tilt.active) {
+    tilt.move(e);
+    redraw = true;
+  } else if (emitter.down) emitter.move(cards.toGrid(e.clientX, e.clientY, drawCard), frame);
 });
-space.addEventListener('pointerup', up);
-space.addEventListener('pointercancel', up);
-space.addEventListener('lostpointercapture', up);
-space.addEventListener('dblclick', () => tilt.reset());
+canvas.addEventListener('pointerup', up);
+canvas.addEventListener('pointercancel', up);
+canvas.addEventListener('lostpointercapture', up);
+canvas.addEventListener('dblclick', () => tilt.reset());
 
 function loop() {
   const list = cards.cards;
@@ -157,15 +179,22 @@ function loop() {
     const c = list[i], drawing = isDraw(c);
     if (!scheduler.shouldStep(i, frame, drawing, busy(c))) continue;
     const t0 = performance.now(), was = c.layer.active;
-    if (c.layer.step(params, frame, scheduler.timeScale(drawing), emitter)) c.renderer.clear();
-    if (c.layer.active && frame - c.lastRender >= style.timing.frameStep) {
-      c.renderer.render(c.layer, look, frame);
+    const wentIdle = c.layer.step(params, frame, scheduler.timeScale(drawing), emitter);
+    // Snapshot to the GPU "on 2s" while the card is alive, and once when it settles.
+    if (wentIdle || (c.layer.active && frame - c.lastRender >= style.timing.frameStep)) {
+      if (renderer.ok) renderer.upload(c, look, frame);
       c.lastRender = frame;
+      redraw = true;
     }
     if (was || c.layer.active) scheduler.record(performance.now() - t0);
   }
   scheduler.endFrame();
 
+  if (cards.update()) redraw = true;
+  if (renderer.ok && redraw) {
+    renderer.draw(cards.drawList(), look, view);
+    redraw = false;
+  }
   if (frame % 30 === 0) updateCount();
   emitter.endFrame();
   frame++;
@@ -178,7 +207,6 @@ setColorMode('all');
 setMode(style.emission.mode);
 palette.setColor(style.color.base, true);
 emitter.rgb = brushRGB;
-cards.apply(false);
-cards.resize();
+resize();
 updateCount();
 loop();

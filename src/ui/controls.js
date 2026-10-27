@@ -99,7 +99,7 @@ export function createStylePanel(container, { presets, getStyle, onLoad, initial
     text.value = JSON.stringify(getStyle(), null, 2);
     error.textContent = '';
   };
-  const panel = h('div', { className: 'json-panel', style: { display: 'none', marginTop: '8px' } },
+  const panel = h('div', { className: 'json-panel', style: { display: 'none' } },
     text,
     h('div', { className: 'json-actions' },
       h('button', {
@@ -143,9 +143,8 @@ export function createStylePanel(container, { presets, getStyle, onLoad, initial
   }, icon('braces'), ' Style JSON');
 
   container.append(
-    h('div', { className: 'section', style: { marginTop: '14px', marginBottom: '0' } },
-      h('label', { className: 'section-label', attrs: { for: 'preset' }, textContent: 'Preset' }), select,
-      h('span', { className: 'spacer' }), toggle),
+    h('label', { className: 'section-label', attrs: { for: 'preset' }, textContent: 'Preset' }),
+    h('div', { className: 'row' }, select, h('span', { className: 'spacer' }), toggle),
     panel);
 
   return {

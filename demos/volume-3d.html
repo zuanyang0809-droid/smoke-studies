@@ -6,34 +6,38 @@
   <title>Smoke Studies · 3D volume</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 </head>
-<body>
-<main>
-  <a class="back" href="./">← Smoke Studies</a>
-  <h1 class="sr-only">Unbounded 3D stylized smoke sandbox: particles move freely in 3D space while each frame is projected to the screen and shaded with the 2D hand-drawn rules (flat bands, hue shift, age tint, ambient occlusion, ember glow). Orbit, pan and zoom the camera and draw anywhere.</h1>
+<body class="app">
+<h1 class="sr-only">3D stylized smoke sandbox: draw smoke anywhere in space, orbit, pan and zoom the camera. The smoke is shaded with hand-drawn rules: flat bands, hue shift, age tint, ember glow.</h1>
+<canvas id="gl" class="surface" style="cursor: grab"></canvas>
+<div id="nogl" class="notice">This study needs WebGL2.</div>
+<a class="back" href="./">← Smoke Studies</a>
+<p id="tip" class="tip"></p>
 
-  <div style="position: relative; margin-top: 0.5rem">
-    <canvas id="gl" style="width: 100%; height: 440px; display: block; border-radius: 12px; touch-action: none; cursor: grab; background: #1a1d21"></canvas>
-    <div id="tip" class="tip" style="bottom: 10px; color: rgba(255, 255, 255, 0.72)"></div>
-    <div id="nogl" class="notice">This study needs WebGL2.</div>
+<button id="panel-toggle" class="panel-toggle" aria-controls="panel"><i class="ti ti-adjustments-horizontal" aria-hidden="true"></i></button>
+<aside id="panel" class="panel" aria-label="Controls">
+  <h2 class="panel-title">03 · 3D volume</h2>
+  <div class="panel-section">
+    <div class="seg"><button data-v="orbit">Orbit</button><button data-v="draw">Draw</button></div>
+    <div class="seg"><button data-mode="brush">Brush</button><button data-mode="livingStroke">Living stroke</button></div>
+    <div class="row">
+      <button id="undo" class="icon-button" aria-label="Undo" title="Undo (Ctrl/Cmd + Z)"><i class="ti ti-arrow-back-up" aria-hidden="true"></i></button>
+      <button id="redo" class="icon-button" aria-label="Redo" title="Redo (Ctrl/Cmd + R or Ctrl/Cmd + Shift + Z)"><i class="ti ti-arrow-forward-up" aria-hidden="true"></i></button>
+      <span class="spacer"></span>
+      <button id="clr"><i class="ti ti-eraser" aria-hidden="true"></i> Clear</button>
+    </div>
   </div>
-
-  <div class="toolbar" style="margin-bottom: 8px">
-    <button data-v="orbit">Orbit</button><button data-v="draw">Draw</button>
-    <span class="divider"></span>
-    <button data-mode="brush">Brush</button><button data-mode="livingStroke">Living stroke</button>
-    <span class="spacer"></span>
-    <button id="clr"><i class="ti ti-eraser" aria-hidden="true"></i> Clear</button>
-  </div>
-  <div class="toolbar" style="margin: 0 0 8px">
+  <div class="panel-section">
     <span class="section-label">Renderer</span>
-    <button data-r="screen" title="Particles splatted to a screen grid and shaded with the 2D rules">Screen-space</button><button data-r="volume" title="Particles splatted to a fitted voxel grid and ray-marched">Volume</button>
+    <div class="seg" id="renderers">
+      <button data-r="screen" title="Particles splatted to a screen grid and shaded with the 2D rules (3D v2)">Screen-space</button><button data-r="volume" title="Particles splatted to a fitted voxel grid and ray-marched (3D v1)">Volume</button>
+    </div>
   </div>
-  <div id="sws" class="toolbar" style="gap: 6px; margin: 0 0 8px"><span class="section-label" style="margin-right: 4px">Color</span></div>
-  <div id="saves" class="section"></div>
-  <div id="layers" class="section layers"></div>
-  <div id="sliders" class="sliders"></div>
-  <div id="style-panel"></div>
-</main>
+  <div id="palette" class="panel-section"><span class="section-label">Color</span></div>
+  <div id="layers" class="panel-section layers"></div>
+  <div id="sliders" class="panel-section sliders"></div>
+  <div id="style-panel" class="panel-section"></div>
+  <div id="saves" class="panel-section"></div>
+</aside>
 <script type="module" src="../src/apps/volume-3d.js"></script>
 </body>
 </html>

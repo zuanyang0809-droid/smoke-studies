@@ -13,12 +13,13 @@ import { Embers3D } from '../sim/embers.js';
 import { ScreenSpaceRenderer } from '../render/screenspace.js';
 import { VolumeRenderer } from '../render/volume.js';
 import { EmberPoints } from '../render/ember-points.js';
-import { SwatchRow } from '../ui/palette.js';
+import { PalettePanel } from '../ui/palette.js';
 import { mountStyleUI } from '../ui/controls.js';
 import { OrbitCamera, attachOrbitInput } from '../ui/orbit.js';
+import { mountPanel } from '../ui/panel.js';
 import { $, toggleGroup } from '../ui/dom.js';
 
-const canvas = $('gl'), HEIGHT = 440, TICK_MS = 16.6;
+const canvas = $('gl'), TICK_MS = 16.6;
 const TIPS = {
   orbit: 'Drag to orbit · Shift + drag to draw · Right-drag to pan · Scroll to zoom',
   draw: 'Drag to draw · Shift + drag to orbit · Right-drag to pan · Scroll to zoom',
@@ -52,21 +53,20 @@ function applyStyle() {
   pal = screen.setStyle(style);
   volume.setStyle(style);
   gl.setClearColor(new THREE.Color(style.color.background));
-  canvas.style.background = style.color.background;
   emberPoints.object.visible = style.embers.enabled;
 }
 
 function resize() {
-  const w = canvas.clientWidth || 680;
-  gl.setSize(w, HEIGHT, false);
-  camera.aspect = w / HEIGHT;
+  const w = innerWidth, h = innerHeight;
+  gl.setSize(w, h, false);
+  camera.aspect = w / h;
   camera.updateProjectionMatrix();
-  screen.resize(w, HEIGHT);
+  screen.resize(w, h);
   const size = new THREE.Vector2();
   gl.getDrawingBufferSize(size);
   emberPoints.resize(size.y, camera.fov);
 }
-new ResizeObserver(resize).observe(canvas);
+addEventListener('resize', resize);
 
 /** Upload the current particles to whichever renderer is active. */
 function present() {
@@ -99,9 +99,12 @@ const setModeButton = toggleGroup('mode', (m) => {
   syncUI();
 });
 
-const swatches = new SwatchRow($('sws'), (hex) => {
-  style.color.base = hex;
-  syncUI();
+const palette = new PalettePanel($('palette'), {
+  onChange(hex) {
+    style.color.base = hex;
+    applyStyle();
+    ui.refresh();
+  },
 });
 
 const ui = mountStyleUI({
@@ -110,6 +113,7 @@ const ui = mountStyleUI({
   onLoad(s) {
     style = s;
     syncUI();
+    palette.setColor(style.color.base, true);
   },
   overrides: { bu: { min: 0 } },
   initialPreset: 0,
@@ -118,9 +122,10 @@ const ui = mountStyleUI({
 function syncUI() {
   ui.sync();
   setModeButton(style.emission.mode);
-  swatches.sync(style.color.base);
   applyStyle();
 }
+
+mountPanel({ undo() {}, redo() {} });
 
 $('clr').onclick = () => {
   sim.clear();
@@ -174,6 +179,7 @@ function frame() {
 
 setView('orbit');
 syncUI();
+palette.setColor(style.color.base, true);
 setRenderer('screen');
 orbit.place();
 frame();
