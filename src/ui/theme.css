@@ -1,0 +1,376 @@
+/* Shared look for all demos (light and dark). */
+:root {
+  --text-primary: #1f1e1d;
+  --text-secondary: #5e5d59;
+  --text-muted: #8f8e89;
+  --text-danger: #a32d2d;
+  --surface-2: #fff;
+  --surface-1: #f5f4f0;
+  --border: rgba(0, 0, 0, 0.12);
+  --border-strong: rgba(0, 0, 0, 0.22);
+  --bg-accent: #dbe8fb;
+  --text-accent: #185fa5;
+  --radius: 8px;
+  --font-mono: ui-monospace, Menlo, monospace;
+  --page: #faf9f5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-primary: #ecebe6;
+    --text-secondary: #b4b2a9;
+    --text-muted: #888780;
+    --text-danger: #f09595;
+    --surface-2: #2a2a28;
+    --surface-1: #242422;
+    --border: rgba(255, 255, 255, 0.12);
+    --border-strong: rgba(255, 255, 255, 0.24);
+    --bg-accent: #0c447c;
+    --text-accent: #b5d4f4;
+    --page: #1a1a19;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+button,
+select {
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: transparent;
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--surface-1);
+}
+
+button.is-on {
+  background: var(--bg-accent);
+  color: var(--text-accent);
+}
+
+input[type='range'] {
+  accent-color: var(--text-accent);
+}
+
+a {
+  color: var(--text-accent);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.back {
+  display: inline-block;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  margin-bottom: 4px;
+}
+
+/* Rows of controls under the canvas */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 6px;
+}
+
+.section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 8px 0;
+  border-top: 0.5px solid var(--border);
+}
+
+.section-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--text-secondary);
+  flex: 1;
+  min-width: 160px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.layers {
+  gap: 6px 16px;
+  margin-bottom: 1rem;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.sliders {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px 24px;
+}
+
+.slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.slider label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  min-width: 84px;
+}
+
+.slider input {
+  flex: 1;
+  min-width: 0;
+}
+
+.slider output {
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 44px;
+}
+
+/* Floating palette button and panel over the canvas */
+.palette-button {
+  position: absolute;
+  z-index: 2;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  min-height: 0;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  border: 0;
+  border-radius: 999px;
+}
+
+.palette-button:hover {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.palette-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.palette-panel {
+  position: absolute;
+  z-index: 2;
+  right: 10px;
+  bottom: 48px;
+  width: 186px;
+  padding: 10px;
+  background: var(--surface-2);
+  border: 0.5px solid var(--border);
+  border-radius: 12px;
+}
+
+.palette-panel canvas {
+  display: block;
+  border-radius: 6px;
+  touch-action: none;
+}
+
+.palette-current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.palette-preview {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.palette-hex {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.palette-caption {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 8px 0 4px;
+}
+
+.palette-recent {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 16px;
+}
+
+.palette-swatches {
+  display: grid;
+  grid-template-columns: repeat(8, 16px);
+  gap: 5px;
+}
+
+.chip {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  padding: 0;
+  border: 0.5px solid var(--border-strong);
+}
+
+.chip.round {
+  border-radius: 50%;
+}
+
+.chip.square {
+  border-radius: 4px;
+}
+
+.chip.large {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+/* Saved effects */
+.saves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+}
+
+.saves-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.save {
+  display: inline-flex;
+  align-items: center;
+}
+
+.save-swatch {
+  display: flex;
+  width: 56px;
+  height: 28px;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 0.5px solid var(--border-strong);
+  position: relative;
+}
+
+.save-swatch span {
+  flex: 1;
+}
+
+.save-swatch .tag {
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  font-size: 11px;
+  color: #fff;
+  text-shadow: 0 0 2px #000;
+}
+
+.save-delete {
+  border: 0;
+  background: none;
+  min-height: 0;
+  padding: 0 4px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* Style JSON editor */
+.json-panel textarea {
+  width: 100%;
+  height: 240px;
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background: var(--surface-1);
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 8px;
+}
+
+.json-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.json-error {
+  font-size: 13px;
+  color: var(--text-danger);
+}
+
+/* Canvas overlays */
+.tip {
+  position: absolute;
+  z-index: 1;
+  left: 12px;
+  bottom: 12px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  pointer-events: none;
+}
+
+.notice {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
+}
