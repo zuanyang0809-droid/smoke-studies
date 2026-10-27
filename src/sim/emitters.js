@@ -155,6 +155,20 @@ export class Emitter3D {
     this.points = 0;
   }
 
+  /** Undo of a living stroke: it stops emitting and its smoke fades. */
+  removeStroke(stroke) {
+    const i = this.strokes.indexOf(stroke);
+    if (i < 0) return;
+    this.strokes.splice(i, 1);
+    this.points -= stroke.length;
+  }
+
+  addStroke(stroke) {
+    if (this.strokes.includes(stroke)) return;
+    this.strokes.push(stroke);
+    this.points += stroke.length;
+  }
+
   begin(sim, g) {
     this.drawing = true;
     this.last = g;
@@ -217,6 +231,9 @@ export class Emitter3D {
     this.moved = false;
     // Many stroke points share a fixed particle budget.
     this.holdScale = Math.min(1, 900 / Math.max(1, this.points * 3));
+    // Living-stroke smoke belongs to no brush stroke, so a brush undo leaves it.
+    const id = sim.strokeId;
+    sim.strokeId = 0;
     let s = 0;
     for (const stroke of this.strokes) {
       for (const p of stroke) {
@@ -224,5 +241,19 @@ export class Emitter3D {
         sim.hold(p.x, p.y, p.z, R * 0.9, 0.25 + 0.25 * n3(s * 0.07, frame * 0.012, 3), n3(s * 0.21, frame * 0.02, 11), this.holdScale);
       }
     }
+    sim.strokeId = id;
   }
+}
+
+/**
+ * Draw a recorded 3D brush stroke again (redo), all at once.
+ * @param {{x: number, y: number, z: number}[]} points  world positions
+ */
+export function replayStroke3D(sim, points, radius) {
+  if (!points.length) return;
+  const e = new Emitter3D();
+  e.radius = radius;
+  e.begin(sim, points[0]);
+  for (let i = 1; i < points.length; i++) e.move(sim, points[i]);
+  e.end();
 }

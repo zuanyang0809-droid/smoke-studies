@@ -1,15 +1,20 @@
-// Study 3, 3D: unbounded curl-noise particles with two interchangeable
-// renderers that read the same Style JSON:
-//   screen-space  splat to a screen grid, shade with the 2D toon rules (3D v2, default)
-//   volume        fitted voxel grid, ray-marched toon surface (3D v1)
-// Reference behavior: archive/3d/smoke-brush-3d-v2.html.
+// Study 3, 3D: smoke you can draw anywhere in space and orbit around.
+// Three renderers read the same Style JSON:
+//   fluid         a GPU smoke fluid, ray-marched as translucent layered smoke (default)
+//   screen-space  curl-noise particles splatted to a screen grid, 2D toon rules (3D v2)
+//   volume        the same particles in a fitted voxel grid, ray-marched surface (3D v1)
+// The two particle renderers are kept for comparison: they read as liquid,
+// which is what docs/3d-smoke-research.md is about.
 
 import '../ui/theme.css';
 import * as THREE from 'three';
+import { History } from '../core/history.js';
 import { getPresets } from '../core/style.js';
 import { Particles3D, ParticleSnapshot, particleParamsFromStyle } from '../sim/particles3d.js';
-import { Emitter3D } from '../sim/emitters.js';
+import { Fluid3D, fluidParams3DFromStyle } from '../sim/fluid3d.js';
+import { Emitter3D, replayStroke3D } from '../sim/emitters.js';
 import { Embers3D } from '../sim/embers.js';
+import { SmokeVolumeRenderer } from '../render/smoke-volume.js';
 import { ScreenSpaceRenderer } from '../render/screenspace.js';
 import { VolumeRenderer } from '../render/volume.js';
 import { EmberPoints } from '../render/ember-points.js';
@@ -26,7 +31,7 @@ const TIPS = {
 };
 
 let style = getPresets()[0]; // starts on "Incense", like the prototype
-let view = 'orbit', mode = 'screen', pal;
+let view = 'orbit', mode = 'fluid', pal;
 
 // three.js setup: colors are authored in display space, so skip color management.
 const gl = new THREE.WebGLRenderer({ canvas, antialias: false });
@@ -37,21 +42,30 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 100);
 const orbit = new OrbitCamera(camera);
 
-const sim = new Particles3D();
+const particles = new Particles3D();
+const fluid = new Fluid3D(gl);
 const snapshot = new ParticleSnapshot();
 const embers = new Embers3D();
 const emitter = new Emitter3D();
+const smoke = new SmokeVolumeRenderer(fluid);
 const screen = new ScreenSpaceRenderer();
 const volume = new VolumeRenderer(camera);
 const emberPoints = new EmberPoints();
-scene.add(screen.object, volume.object, emberPoints.object);
+scene.add(smoke.object, screen.object, volume.object, emberPoints.object);
+
+/** The simulation behind the active renderer; Emitter3D drives either. */
+const sim = () => (mode === 'fluid' ? fluid : particles);
+/** Embers in the fluid ride its tracers. */
+const emberSource = () => (mode === 'fluid' ? fluid.tracers : particles);
 
 function applyStyle() {
-  sim.params = particleParamsFromStyle(style);
+  particles.params = fluid.tracers.params = particleParamsFromStyle(style);
+  fluid.params = fluidParams3DFromStyle(style);
   emitter.mode = style.emission.mode;
   emitter.radius = style.emission.radius;
   pal = screen.setStyle(style);
   volume.setStyle(style);
+  smoke.setStyle(style);
   gl.setClearColor(new THREE.Color(style.color.background));
   emberPoints.object.visible = style.embers.enabled;
 }
@@ -68,21 +82,27 @@ function resize() {
 }
 addEventListener('resize', resize);
 
-/** Upload the current particles to whichever renderer is active. */
+/** Hand the current smoke to the active renderer (on the frame step). */
 function present() {
-  if (mode === 'screen') snapshot.capture(sim);
-  else volume.update(sim);
-  emberPoints.update(embers, pal, style.embers.matchSmoke, sim.frame);
+  if (mode === 'fluid') smoke.update();
+  else if (mode === 'screen') snapshot.capture(particles);
+  else volume.update(particles);
+  emberPoints.update(embers, pal, style.embers.matchSmoke, sim().frame);
 }
 
 const setRendererButton = toggleGroup('r', (r) => setRenderer(r));
 function setRenderer(r) {
+  // The fluid and the particles are different simulations: switching between
+  // them starts a fresh scene. Screen-space and volume share the particles.
+  if ((r === 'fluid') !== (mode === 'fluid')) clearScene();
   mode = r;
   setRendererButton(r);
+  smoke.visible = r === 'fluid';
   screen.visible = r === 'screen';
   volume.visible = r === 'volume';
-  // The ray marcher is heavier, so it renders at a lower pixel ratio (as in v1).
-  gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, r === 'volume' ? 1.5 : 2));
+  // Ray marchers are heavier, so they render at a lower pixel ratio (as in v1).
+  const dpr = window.devicePixelRatio || 1;
+  gl.setPixelRatio(Math.min(dpr, r === 'screen' ? 2 : 1.5));
   resize();
   present();
 }
@@ -125,13 +145,85 @@ function syncUI() {
   applyStyle();
 }
 
-mountPanel({ undo() {}, redo() {} });
+// Undo / redo, one stroke at a time.
+//   living stroke  taken off the emitter (its smoke fades) and put back
+//   brush, fluid   the smoke is restored from a GPU snapshot; redo replays the points
+//   brush, particles  the stroke's own particles are taken out and put back
+let stroke = null, nextStrokeId = 1;
+const chrome = mountPanel({
+  undo() {
+    endStroke();
+    strokeHistory.undo();
+    present();
+  },
+  redo() {
+    endStroke();
+    strokeHistory.redo();
+    present();
+  },
+});
+const strokeHistory = new History(30, () => chrome.syncHistory(strokeHistory));
+chrome.syncHistory(strokeHistory);
 
-$('clr').onclick = () => {
-  sim.clear();
+function strokeEntry(target, first) {
+  if (emitter.stroke) {
+    const living = emitter.stroke;
+    return { record() {}, undo: () => emitter.removeStroke(living), redo: () => emitter.addStroke(living) };
+  }
+  const points = [first], radius = emitter.radius;
+  if (target === fluid) {
+    let snap = before;
+    return {
+      record: (p) => points.push(p),
+      undo: () => fluid.restore(snap),
+      redo() {
+        fluid.release(snap);
+        snap = fluid.snapshot();
+        replayStroke3D(fluid, points, radius);
+      },
+      dispose: () => fluid.release(snap),
+    };
+  }
+  const id = particles.strokeId;
+  let taken = null;
+  return {
+    record: (p) => points.push(p),
+    undo: () => (taken = particles.extract(id)),
+    redo: () => particles.append(taken),
+  };
+}
+
+let before = null; // fluid snapshot taken as a brush stroke begins
+function beginStroke(g) {
+  const target = sim();
+  if (target === fluid) {
+    fluid.follow(g.x, g.y, g.z);
+    before = fluid.snapshot(); // a full living stroke falls back to brush, so always
+  } else particles.strokeId = nextStrokeId++;
+  emitter.begin(target, g);
+  stroke = strokeEntry(target, g);
+  if (before && emitter.stroke) fluid.release(before); // fell back to a living stroke
+  before = null;
+  strokeHistory.push(stroke);
+}
+
+function endStroke() {
+  emitter.end();
+  particles.strokeId = 0;
+  stroke = null;
+}
+
+function clearScene() {
+  particles.clear();
+  fluid.clear();
   emitter.clear();
   embers.clear();
   volume.clear();
+  strokeHistory.clear();
+}
+
+$('clr').onclick = () => {
+  clearScene();
   present();
 };
 
@@ -141,24 +233,29 @@ attachOrbitInput(canvas, orbit, {
     orbit.setDrawPlane();
     const g = orbit.worldAt(e, canvas);
     if (!g) return false;
-    emitter.begin(sim, g);
+    beginStroke(g);
     return true;
   },
   onDrawMove(e) {
     const g = orbit.worldAt(e, canvas);
-    if (g) emitter.move(sim, g);
+    if (!g || !stroke) return;
+    if (mode === 'fluid') fluid.follow(g.x, g.y, g.z);
+    emitter.move(sim(), g);
+    stroke.record(g);
   },
-  onEnd: () => emitter.end(),
+  onEnd: endStroke,
 });
 
 /** Fixed 60 Hz simulation tick, independent of the display rate. */
 function tick() {
-  sim.frame++;
-  emitter.tick(sim);
-  sim.step();
-  embers.spawn(sim, style.embers, mode === 'volume' ? volume.densityAt : undefined);
-  embers.step(sim);
-  if (sim.frame % style.timing.frameStep === 0) present();
+  const s = sim();
+  s.frame++;
+  emitter.tick(s);
+  s.step();
+  const src = emberSource();
+  embers.spawn(src, style.embers, mode === 'volume' ? volume.densityAt : undefined);
+  embers.step(src);
+  if (s.frame % style.timing.frameStep === 0) present();
 }
 
 let lastT = performance.now(), acc = 0;
@@ -180,6 +277,6 @@ function frame() {
 setView('orbit');
 syncUI();
 palette.setColor(style.color.base, true);
-setRenderer('screen');
+setRenderer('fluid');
 orbit.place();
 frame();

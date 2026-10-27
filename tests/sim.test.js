@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_STYLE } from '../src/core/style.js';
 import { Fluid2D, fluidParamsFromStyle, gridForViewport } from '../src/sim/fluid2d.js';
 import { SmokeLayer2D } from '../src/sim/layer2d.js';
-import { Emitter2D, replayStroke2D } from '../src/sim/emitters.js';
+import { Emitter2D, Emitter3D, replayStroke2D } from '../src/sim/emitters.js';
+import { fluidParams3DFromStyle, followShift } from '../src/sim/fluid3d.js';
 import { strokeEntry2D } from '../src/sim/undo2d.js';
 import { AdaptiveScheduler } from '../src/sim/scheduler.js';
 import { emberLook } from '../src/sim/embers.js';
@@ -197,5 +198,49 @@ describe('strokeEntry2D', () => {
     entry.redo();
     expect(layer.strokes).toEqual([stroke]);
     expect(layer.points).toBe(stroke.length);
+  });
+});
+
+describe('3D undo helpers', () => {
+  it('takes out exactly one stroke of particles and puts it back', () => {
+    const sim = new Particles3D(2000);
+    sim.params = particleParamsFromStyle(DEFAULT_STYLE);
+    sim.strokeId = 1;
+    sim.inject(0, 0, 0, 2, 0.2);
+    sim.strokeId = 2;
+    sim.inject(0.5, 0, 0, 2, 0.2);
+    sim.strokeId = 0;
+    sim.step(); // compaction keeps the ids
+    const n = sim.count, mine = Array.from(sim.ps.subarray(0, n)).filter((id) => id === 2).length;
+    const taken = sim.extract(2);
+    expect(taken.px.length).toBe(mine);
+    expect(sim.count).toBe(n - mine);
+    expect(Array.from(sim.ps.subarray(0, sim.count)).every((id) => id === 1)).toBe(true);
+    sim.append(taken);
+    expect(sim.count).toBe(n);
+  });
+
+  it('removes and re-adds living 3D strokes with their point count', () => {
+    const e = new Emitter3D(), stroke = [{ x: 0, y: 0, z: 0 }, { x: 0.1, y: 0, z: 0 }];
+    e.addStroke(stroke);
+    e.addStroke(stroke);
+    expect(e.points).toBe(2);
+    e.removeStroke(stroke);
+    expect(e.strokes).toEqual([]);
+    expect(e.points).toBe(0);
+  });
+
+  it('moves the fluid box only when a point nears a face', () => {
+    const n = [64, 80, 64], home = [32, 25.6, 32];
+    expect(followShift([32, 30, 32], n, home)).toEqual([0, 0, 0]);
+    expect(followShift([2, 30, 70], n, home)).toEqual([-30, 0, 38]);
+    expect(followShift([32, 78, 32], n, home)).toEqual([0, 52, 0]);
+  });
+
+  it('maps the style to stable fluid units', () => {
+    const p = fluidParams3DFromStyle(DEFAULT_STYLE);
+    expect(p.buoyancy).toBeCloseTo(0.01);
+    expect(p.cooling).toBeLessThan(1);
+    expect(p.agingFrames).toBe(80);
   });
 });

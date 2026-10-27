@@ -26,10 +26,12 @@ export class Particles3D {
     this.max = max;
     this.cell = CELL;
     const F = () => new Float32Array(max);
-    // Position, texture value, age, weight, cached velocity.
+    // Position, texture value, age, weight, cached velocity, stroke id.
     this.px = F(); this.py = F(); this.pz = F();
     this.pt = F(); this.pa = F(); this.pw = F();
     this.qx = F(); this.qy = F(); this.qz = F();
+    this.ps = F();
+    this.strokeId = 0; // new particles belong to this stroke (0 = none), for undo
     this.count = 0;
     this.frame = 0;
     this.seed = 0;
@@ -85,6 +87,7 @@ export class Particles3D {
     this.pa[n] = 0;
     this.pw[n] = 1;
     this.qx[n] = this.qy[n] = this.qz[n] = 0;
+    this.ps[n] = this.strokeId;
   }
 
   /** A burst of particles proportional to the brush volume (radius in cells). */
@@ -109,7 +112,7 @@ export class Particles3D {
   /** Move, age and cull particles. Velocity is refreshed every third frame. */
   step() {
     const { ageDecay, agingFrames } = this.params, o = [0, 0, 0];
-    const { px, py, pz, pt, pa, pw, qx, qy, qz } = this;
+    const { px, py, pz, pt, pa, pw, qx, qy, qz, ps } = this;
     const imps = this.impulses;
     for (let i = imps.length - 1; i >= 0; i--) {
       imps[i].s *= 0.93;
@@ -136,11 +139,37 @@ export class Particles3D {
       px[m] = x; py[m] = y; pz[m] = z;
       pt[m] = pt[n]; pa[m] = a; pw[m] = w;
       qx[m] = qx[n]; qy[m] = qy[n]; qz[m] = qz[n];
+      ps[m] = ps[n];
       m++;
     }
     this.count = m;
   }
+
+  /** Take out every particle of a stroke (undo). @returns them, for `append` */
+  extract(id) {
+    const keys = PARTICLE_FIELDS, out = Object.fromEntries(keys.map((k) => [k, []]));
+    let m = 0;
+    for (let n = 0; n < this.count; n++) {
+      if (this.ps[n] === id) {
+        for (const k of keys) out[k].push(this[k][n]);
+        continue;
+      }
+      for (const k of keys) this[k][m] = this[k][n];
+      m++;
+    }
+    this.count = m;
+    return out;
+  }
+
+  /** Put extracted particles back (redo), as far as the budget allows. */
+  append(taken) {
+    const n = Math.min(taken.px.length, this.max - this.count);
+    for (const k of PARTICLE_FIELDS) this[k].set(taken[k].slice(0, n), this.count);
+    this.count += n;
+  }
 }
+
+const PARTICLE_FIELDS = ['px', 'py', 'pz', 'pt', 'pa', 'pw', 'qx', 'qy', 'qz', 'ps'];
 
 /** A frozen copy of particle state, so smoke can step "on 2s" while the camera moves every frame. */
 export class ParticleSnapshot {
