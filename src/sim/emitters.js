@@ -117,6 +117,20 @@ export class Emitter2D {
   }
 }
 
+/**
+ * Draw a recorded brush stroke again (redo). The replay is not frame exact:
+ * the whole path is injected at once, which reads the same a moment later.
+ * @param {{x: number, y: number}[]} points  grid cells
+ */
+export function replayStroke2D(layer, points, rgb, frame) {
+  if (!points.length) return;
+  const e = new Emitter2D();
+  e.rgb = rgb;
+  e.begin(layer, points[0], frame);
+  for (let i = 1; i < points.length; i++) e.move(points[i], frame + i);
+  e.end();
+}
+
 /** Pointer -> 3D particles. Points are world positions on the draw plane. */
 export class Emitter3D {
   constructor() {

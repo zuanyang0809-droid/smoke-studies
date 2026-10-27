@@ -29,6 +29,26 @@ export class SmokeLayer2D {
     this.active = false;
   }
 
+  /** Undo of a living stroke: it stops emitting and its smoke fades. */
+  removeStroke(stroke) {
+    const i = this.strokes.indexOf(stroke);
+    if (i < 0) return;
+    this.strokes.splice(i, 1);
+    this.points -= stroke.length;
+  }
+
+  addStroke(stroke) {
+    if (this.strokes.includes(stroke)) return;
+    this.strokes.push(stroke);
+    this.points += stroke.length;
+  }
+
+  /** Undo of a brush stroke: back to the fluid as it was when the stroke began. */
+  restore(snap) {
+    this.fluid.restore(snap);
+    this.active = true; // step once more; the layer goes idle if nothing is left
+  }
+
   /** Busy layers need simulation time even if they hold no smoke yet. */
   isBusy(emitter) {
     return this.active || this.strokes.length > 0 || emitter.isDrawing(this);

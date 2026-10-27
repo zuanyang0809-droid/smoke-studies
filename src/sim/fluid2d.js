@@ -15,6 +15,20 @@ import { n3 } from '../core/noise.js';
 export const GRID_W = 160;
 export const GRID_H = 107;
 
+/**
+ * Grid size for a viewport: about `cells` cells with the viewport's aspect,
+ * so smoke can fill the whole window at a fixed simulation cost.
+ */
+export function gridForViewport(width, height, cells = 32000) {
+  const aspect = Math.min(4, Math.max(0.25, width / height));
+  const nx = Math.max(40, Math.round(Math.sqrt(cells * aspect)));
+  return { nx, ny: Math.max(40, Math.round(nx / aspect)) };
+}
+
+// Fields that make up the state an undo snapshot restores.
+const STATE = ['u', 'v', 'd', 't', 'A'];
+const COLOR_STATE = ['cr', 'cg', 'cb'];
+
 /** Map normalized Style JSON values to this solver's units. */
 export function fluidParamsFromStyle(style) {
   return {
@@ -63,6 +77,18 @@ export class Fluid2D {
   clear() {
     this.u.fill(0); this.v.fill(0); this.d.fill(0); this.t.fill(0.5); this.A.fill(0);
     this.bounds = null;
+  }
+
+  /** Copy of the simulation state (undo). */
+  snapshot() {
+    const keys = this.hasColor ? [...STATE, ...COLOR_STATE] : STATE;
+    return { keys, fields: keys.map((k) => this[k].slice()), bounds: this.bounds && this.bounds.slice() };
+  }
+
+  /** Go back to a snapshot taken from this grid. */
+  restore(snap) {
+    snap.keys.forEach((k, i) => this[k].set(snap.fields[i]));
+    this.bounds = snap.bounds && snap.bounds.slice();
   }
 
   /** Fill the color field with one color. */

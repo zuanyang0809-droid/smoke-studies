@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_STYLE } from '../src/core/style.js';
-import { Fluid2D, fluidParamsFromStyle } from '../src/sim/fluid2d.js';
+import { Fluid2D, fluidParamsFromStyle, gridForViewport } from '../src/sim/fluid2d.js';
+import { SmokeLayer2D } from '../src/sim/layer2d.js';
+import { replayStroke2D } from '../src/sim/emitters.js';
 import { AdaptiveScheduler } from '../src/sim/scheduler.js';
 import { emberLook } from '../src/sim/embers.js';
 import { Particles3D, particleParamsFromStyle } from '../src/sim/particles3d.js';
@@ -96,7 +98,8 @@ describe('emberLook', () => {
 describe('Particles3D', () => {
   it('spawns, rises and culls particles', () => {
     const sim = new Particles3D(5000);
-    sim.params = particleParamsFromStyle({ ...DEFAULT_STYLE, motion: { ...DEFAULT_STYLE.motion, dissipation: 1 } });
+    // No curl: the noise table is random per run and could outweigh the rise.
+    sim.params = particleParamsFromStyle({ ...DEFAULT_STYLE, motion: { ...DEFAULT_STYLE.motion, curl: 0, dissipation: 1 } });
     sim.inject(0, 0, 0, 2, 0.2);
     const n0 = sim.count;
     expect(n0).toBe(Math.round(0.2 * 8 * 22));
@@ -109,5 +112,49 @@ describe('Particles3D', () => {
     expect(y1).toBeGreaterThan(y0);
     for (let i = 0; i < 400; i++) sim.step();
     expect(sim.count).toBe(0);
+  });
+});
+
+describe('2D grid helpers', () => {
+  it('sizes the grid to the viewport aspect at about the cell budget', () => {
+    const { nx, ny } = gridForViewport(1600, 900, 32000);
+    expect(nx / ny).toBeCloseTo(16 / 9, 1);
+    expect(nx * ny).toBeGreaterThan(30000);
+    expect(nx * ny).toBeLessThan(34000);
+    expect(gridForViewport(10, 2000)).toEqual({ nx: 89, ny: 356 }); // aspect clamped to 1:4
+  });
+
+  it('restores a snapshot exactly, including color and bounds', () => {
+    const f = new Fluid2D({ color: true, trackBounds: true });
+    f.inject(40, 40, 3, 0.4, 0.5, -0.5, 0, 0.5, [200, 10, 10]);
+    f.step(params, 0);
+    const snap = f.snapshot(), d = f.d.slice(), cr = f.cr.slice(), bounds = f.bounds.slice();
+    f.inject(90, 60, 4, 0.5, 0, 0, 0, 0.5, [10, 200, 10]);
+    for (let i = 0; i < 5; i++) f.step(params, i);
+    f.restore(snap);
+    expect(f.d).toEqual(d);
+    expect(f.cr).toEqual(cr);
+    expect(f.bounds).toEqual(bounds);
+    f.bounds[0] = -1; // the snapshot keeps its own copy
+    expect(snap.bounds).toEqual(bounds);
+  });
+
+  it('replays a recorded brush stroke into the layer', () => {
+    const layer = new SmokeLayer2D({ trackBounds: true });
+    replayStroke2D(layer, [{ x: 30, y: 50 }, { x: 40, y: 48 }, { x: 52, y: 45 }], [255, 0, 0], 0);
+    expect(layer.fluid.hasSmoke()).toBe(true);
+    expect(layer.fluid.bounds[0]).toBeLessThanOrEqual(28);
+    expect(layer.fluid.bounds[1]).toBeGreaterThanOrEqual(54);
+  });
+
+  it('removes and re-adds living strokes with their point count', () => {
+    const layer = new SmokeLayer2D();
+    const stroke = [{ x: 1, y: 1 }, { x: 2, y: 1 }];
+    layer.addStroke(stroke);
+    layer.addStroke(stroke);
+    expect(layer.points).toBe(2);
+    layer.removeStroke(stroke);
+    expect(layer.strokes).toEqual([]);
+    expect(layer.points).toBe(0);
   });
 });
