@@ -9,9 +9,10 @@
 //   AO         darken crevices where density is below its blurred neighborhood
 //   ember core glowing veins and red-brown shadows in fresh, dense smoke
 //
-// Two output modes: opaque over a background color (2D study), or
-// transparent with dirty-rect updates so many cards can be composited by the
-// browser (2.5D study).
+// Two output modes: opaque over a background color, or transparent with
+// dirty-rect updates for many cards. The studies draw with the GPU twin of
+// these rules (toon-gl.js + shaders/toon-card.frag.glsl); this CPU version is
+// the reference the parity tests check against the prototypes.
 
 import { lerp } from '../core/math.js';
 import { emberStops, hexToRgb, makePalette, mix } from '../core/color.js';
@@ -29,6 +30,8 @@ export function toonLookFromStyle(style, cache) {
   return {
     palette,
     cache,
+    base: hexToRgb(style.color.base),
+    hueShift: style.color.hueShift,
     background: hexToRgb(style.color.background),
     opacity: style.shading.opacity,
     silhouette: style.shading.silhouetteThreshold,
@@ -46,6 +49,55 @@ export function toonLookFromStyle(style, cache) {
     embers: style.embers.enabled,
     emberStops: emberStops(palette, style.embers.matchSmoke),
   };
+}
+
+const blurBuffers = new WeakMap(); // fluid -> { B, B2 }
+
+/** Grid region to blur around smoke bounds with a margin of `m` cells. */
+export function blurRegion(fluid, bb, m) {
+  return [Math.max(0, bb[0] - m - 2), Math.min(fluid.nx - 1, bb[1] + m + 2), Math.max(0, bb[2] - m - 2), Math.min(fluid.ny - 1, bb[3] + m + 2)];
+}
+
+/**
+ * Separable 5x5 box blur of density over a region (drives solidity and AO).
+ * The buffer is kept per fluid, so the CPU and GPU renderers share it.
+ * @returns {Float32Array} blurred density, valid inside the region
+ */
+export function blurDensity(fluid, r) {
+  let buf = blurBuffers.get(fluid);
+  if (!buf) {
+    buf = { B: new Float32Array(fluid.n), B2: new Float32Array(fluid.n) };
+    blurBuffers.set(fluid, buf);
+  }
+  const { nx, d } = fluid, { B, B2 } = buf;
+  const [i0, i1, j0, j1] = r;
+  for (let j = j0; j <= j1; j++) {
+    for (let i = i0; i <= i1; i++) {
+      let s = 0, n = 0;
+      for (let o = -2; o <= 2; o++) {
+        const ii = i + o;
+        if (ii >= 0 && ii < nx) {
+          s += d[ii + j * nx];
+          n++;
+        }
+      }
+      B2[i + j * nx] = s / n;
+    }
+  }
+  for (let j = j0; j <= j1; j++) {
+    for (let i = i0; i <= i1; i++) {
+      let s = 0, n = 0;
+      for (let o = -2; o <= 2; o++) {
+        const jj = j + o;
+        if (jj >= j0 && jj <= j1) {
+          s += B2[i + jj * nx];
+          n++;
+        }
+      }
+      B[i + j * nx] = s / n;
+    }
+  }
+  return B;
 }
 
 export class ToonRenderer2D {
@@ -66,7 +118,6 @@ export class ToonRenderer2D {
     this.dirtyRects = dirtyRects;
     this.image = this.ctx.createImageData(this.width, this.height);
     this.prevRect = null;
-    this._blur = new WeakMap(); // fluid -> { B, B2 } blurred density buffers
   }
 
   /** Erase whatever this renderer drew last. */
@@ -75,44 +126,6 @@ export class ToonRenderer2D {
       this.ctx.clearRect(...this.prevRect);
       this.prevRect = null;
     }
-  }
-
-  /** Separable 5x5 box blur of density over a region (drives solidity and AO). */
-  _blurDensity(fluid, r) {
-    let buf = this._blur.get(fluid);
-    if (!buf) {
-      buf = { B: new Float32Array(fluid.n), B2: new Float32Array(fluid.n) };
-      this._blur.set(fluid, buf);
-    }
-    const { nx, d } = fluid, { B, B2 } = buf;
-    const [i0, i1, j0, j1] = r;
-    for (let j = j0; j <= j1; j++) {
-      for (let i = i0; i <= i1; i++) {
-        let s = 0, n = 0;
-        for (let o = -2; o <= 2; o++) {
-          const ii = i + o;
-          if (ii >= 0 && ii < nx) {
-            s += d[ii + j * nx];
-            n++;
-          }
-        }
-        B2[i + j * nx] = s / n;
-      }
-    }
-    for (let j = j0; j <= j1; j++) {
-      for (let i = i0; i <= i1; i++) {
-        let s = 0, n = 0;
-        for (let o = -2; o <= 2; o++) {
-          const jj = j + o;
-          if (jj >= j0 && jj <= j1) {
-            s += B2[i + jj * nx];
-            n++;
-          }
-        }
-        B[i + j * nx] = s / n;
-      }
-    }
-    return B;
   }
 
   /**
@@ -136,7 +149,7 @@ export class ToonRenderer2D {
         x1 = Math.min(W - 1, (bb[1] + m + 1) * CS);
         y0 = Math.max(0, (bb[2] - m) * CS);
         y1 = Math.min(H - 1, (bb[3] + m + 1) * CS);
-        B = this._blurDensity(fluid, [Math.max(0, bb[0] - m - 2), Math.min(nx - 1, bb[1] + m + 2), Math.max(0, bb[2] - m - 2), Math.min(ny - 1, bb[3] + m + 2)]);
+        B = blurDensity(fluid, blurRegion(fluid, bb, m));
       }
       if (look.embers) {
         for (const s of layer.embers.list) {
@@ -152,7 +165,7 @@ export class ToonRenderer2D {
         return;
       }
     } else {
-      B = this._blurDensity(fluid, [0, nx - 1, 0, ny - 1]);
+      B = blurDensity(fluid, [0, nx - 1, 0, ny - 1]);
     }
 
     const D = this.image.data, transparent = this.transparent;

@@ -144,23 +144,26 @@ describe('2.5D cards vs archive/2d/smoke-brush-2d-v15.html', () => {
     vi.stubGlobal('performance', clock());
     vi.stubGlobal('document', { createElement: () => fakeElement() });
     vi.stubGlobal('ResizeObserver', class { observe() {} });
-    const [{ hexToRgb, PaletteCache }, { SmokeLayer2D, layerParamsFromStyle }, { Emitter2D }, { AdaptiveScheduler }, { toonLookFromStyle }, { CardSpace }, { WorldTilt }] = await importModules(SEED, [
+    const [{ hexToRgb, PaletteCache }, { SmokeLayer2D, layerParamsFromStyle }, { Emitter2D }, { AdaptiveScheduler }, { toonLookFromStyle, ToonRenderer2D }, { CardSpace }, { WorldTilt }] = await importModules(SEED, [
       '../src/core/color.js', '../src/sim/layer2d.js', '../src/sim/emitters.js', '../src/sim/scheduler.js',
-      '../src/render/toon2d.js', '../src/render/css-cards.js', '../src/ui/tilt.js',
+      '../src/render/toon2d.js', '../src/render/card-space.js', '../src/ui/tilt.js',
     ]);
     // Same wiring as src/apps/cards-2_5d.js.
     const style = mergeStyle(DEFAULT_STYLE, {});
     let brushRGB = hexToRgb(style.color.base), frame = 0, drawCard = null;
     const cache = new PaletteCache(style.color.hueShift), emitter = new Emitter2D(), scheduler = new AdaptiveScheduler({ budgetMs: 12, maxSkip: 2 });
     const cards = new CardSpace({
-      stage: fakeElement({ getBoundingClientRect: () => rect }), world: fakeElement(), width: 480, height: 320,
+      width: 480, height: 320,
       createLayer: () => new SmokeLayer2D({ color: true, rgb: brushRGB, trackBounds: true, pressureIterations: 14 }),
     });
+    // The app shades cards on the GPU; the CPU reference renderer gives pixels to compare.
+    const rendererOf = (c) => (c.renderer ||= new ToonRenderer2D(fakeElement(), { cellSize: 3, transparent: true, dirtyRects: true }));
+    const toGrid = (e, card) => cards.toGrid(e.clientX - rect.left, e.clientY - rect.top, card);
     const tilt = new WorldTilt(cards);
     const params = layerParamsFromStyle(style);
     let look = toonLookFromStyle(style, cache);
     emitter.rgb = brushRGB;
-    cards.resize();
+    cards.setViewport(rect.width, rect.height);
     const loop = () => {
       const list = cards.cards, isDraw = (c) => emitter.isDrawing(c.layer), busy = (c) => c.layer.isBusy(emitter);
       scheduler.beginFrame(list.filter((c) => busy(c) && !isDraw(c)).length, emitter.down);
@@ -168,9 +171,9 @@ describe('2.5D cards vs archive/2d/smoke-brush-2d-v15.html', () => {
         const c = list[i], drawing = isDraw(c);
         if (!scheduler.shouldStep(i, frame, drawing, busy(c))) continue;
         const t0 = performance.now(), was = c.layer.active;
-        if (c.layer.step(params, frame, scheduler.timeScale(drawing), emitter)) c.renderer.clear();
+        if (c.layer.step(params, frame, scheduler.timeScale(drawing), emitter)) rendererOf(c).clear();
         if (c.layer.active && frame - c.lastRender >= style.timing.frameStep) {
-          c.renderer.render(c.layer, look, frame);
+          rendererOf(c).render(c.layer, look, frame);
           c.lastRender = frame;
         }
         if (was || c.layer.active) scheduler.record(performance.now() - t0);
@@ -186,11 +189,11 @@ describe('2.5D cards vs archive/2d/smoke-brush-2d-v15.html', () => {
         if (e.shiftKey) tilt.begin(e);
         else {
           drawCard = cards.pickCard();
-          emitter.begin(drawCard.layer, cards.toGrid(e, drawCard), frame);
+          emitter.begin(drawCard.layer, toGrid(e, drawCard), frame);
         }
       } else if (a?.[0] === 'move') {
         if (tilt.active) tilt.move(e);
-        else if (emitter.down) emitter.move(cards.toGrid(e, drawCard), frame);
+        else if (emitter.down) emitter.move(toGrid(e, drawCard), frame);
       } else if (a?.[0] === 'up') {
         emitter.end();
         tilt.end();
@@ -203,7 +206,7 @@ describe('2.5D cards vs archive/2d/smoke-brush-2d-v15.html', () => {
           for (const s of c.layer.strokes) s.col = brushRGB.slice();
         }
         look = toonLookFromStyle(style, cache);
-        for (const c of cards.cards) if (!c.layer.active) c.renderer.render(c.layer, look, frame);
+        for (const c of cards.cards) if (!c.layer.active) rendererOf(c).render(c.layer, look, frame);
       } else if (a?.[0] === 'depth') cards.depth = a[1];
       loop();
       if (CHECK.includes(f)) {
@@ -214,9 +217,9 @@ describe('2.5D cards vs archive/2d/smoke-brush-2d-v15.html', () => {
           const m = cards.cards[i];
           expect(maxDiff(pc.d, m.layer.fluid.d), `card ${i} density @${f}`).toBe(0);
           expect(maxDiff(pc.cr, m.layer.fluid.cr), `card ${i} color @${f}`).toBe(0);
-          expect(maxDiff(pc.px, m.renderer.image.data), `card ${i} pixels @${f}`).toBe(0);
+          expect(maxDiff(pc.px, rendererOf(m).image.data), `card ${i} pixels @${f}`).toBe(0);
           expect(m.layer.fluid.bounds).toEqual(pc.bb);
-          expect(m.renderer.prevRect).toEqual(pc.prc);
+          expect(rendererOf(m).prevRect).toEqual(pc.prc);
         });
       }
     }

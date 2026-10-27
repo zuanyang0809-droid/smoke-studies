@@ -1,14 +1,13 @@
-// Shift + drag rotates a CSS 3D world (2.5D cards). Plain DOM, no three.js.
+// Shift + drag rotates the 2.5D world. Angles are unbounded, so the view can
+// turn all the way round to the backs of the cards. Plain DOM, no three.js.
 
-import { clamp } from '../core/math.js';
+import { angleDelta } from '../render/card-space.js';
 
 /** Drag-to-rotate for a view object with { rx, ry, apply(animate) } in degrees. */
 export class WorldTilt {
-  constructor(view, { sensitivity = 0.35, maxX = 70, maxY = 80 } = {}) {
+  constructor(view, { sensitivity = 0.35 } = {}) {
     this.view = view;
     this.sensitivity = sensitivity;
-    this.maxX = maxX;
-    this.maxY = maxY;
     this.active = false;
     this._last = null;
   }
@@ -20,8 +19,8 @@ export class WorldTilt {
 
   move(e) {
     const v = this.view, k = this.sensitivity;
-    v.ry = clamp(v.ry + (e.clientX - this._last[0]) * k, -this.maxY, this.maxY);
-    v.rx = clamp(v.rx - (e.clientY - this._last[1]) * k, -this.maxX, this.maxX);
+    v.ry += (e.clientX - this._last[0]) * k;
+    v.rx -= (e.clientY - this._last[1]) * k;
     this._last = [e.clientX, e.clientY];
     v.apply(false);
   }
@@ -30,9 +29,11 @@ export class WorldTilt {
     this.active = false;
   }
 
-  /** Face the front again (double-click). */
+  /** Face the front again (double-click), turning the short way round. */
   reset() {
-    this.view.rx = this.view.ry = 0;
-    this.view.apply(true);
+    const v = this.view;
+    v.rx -= angleDelta(v.rx, 0);
+    v.ry -= angleDelta(v.ry, 0);
+    v.apply(true);
   }
 }
