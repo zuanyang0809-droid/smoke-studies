@@ -630,15 +630,30 @@ a {
   color: #ecebe6;
 }
 
-.tiles {
+.home-main {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: none;
+  padding: 48px 16px;
+  box-sizing: border-box;
+}
+
+.home-title {
+  margin: 0 0 clamp(24px, 4vw, 44px);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #ecebe6;
+}
+
+.tiles {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: clamp(20px, 4vw, 56px);
-  max-width: none;
-  padding: 48px 16px;
-  box-sizing: border-box;
 }
 
 .study {
@@ -657,9 +672,10 @@ a {
   aspect-ratio: 1;
   overflow: hidden;
   background: #000;
-  border: 0.5px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.32);
   border-radius: 14px;
-  transition: border-color 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
 }
 
 .tile {
@@ -680,8 +696,9 @@ a {
 
 .study:hover .tile,
 .study:focus-visible .tile {
-  border-color: rgba(255, 255, 255, 0.42);
-  transform: scale(1.015);
+  border-color: rgba(255, 255, 255, 0.75);
+  background-color: #0b0b0c;
+  transform: translateY(-3px) scale(1.02);
 }
 
 .study:focus-visible .tile {
@@ -710,9 +727,12 @@ a {
 }
 
 @media (max-width: 720px) {
+  .home-main {
+    padding: 32px 16px;
+  }
+
   .tiles {
     flex-direction: column;
-    padding: 32px 16px;
   }
 
   .tile {
