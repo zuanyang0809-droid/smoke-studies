@@ -1,0 +1,23 @@
+{
+  "name": "smoke-studies",
+  "version": "1.0.0",
+  "description": "Stylized smoke drawing studies in 2D, 2.5D and 3D, driven by one renderer-agnostic Style JSON.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "author": "Anyang Zu",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "three": "~0.160.0"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5",
+    "vitest": "^3.2.4"
+  }
+}
