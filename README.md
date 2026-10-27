@@ -40,7 +40,7 @@ npm run build
 
 ## Controls
 
-Every study fills the window (black by default; the background is part of the Style JSON). All controls sit in the panel on the right, which you can hide with its button or the **\\** key; the panel remembers whether it was open.
+Every study fills the window (black by default; the background is part of the Style JSON). All controls sit in the panel on the right. It opens on every load as a hint, slides away after about five seconds (unless you hover or use it), and comes back with its button or the **\\** key.
 
 - **Drag** to draw. **Brush** smoke drifts away and smolders while you hold still; a **Living stroke** keeps emitting until you clear it.
 - **Undo / redo**, one stroke at a time (up to 30): **Ctrl / Cmd + Z** undoes, **Ctrl / Cmd + R** or **Ctrl / Cmd + Shift + Z** redoes (the page does not reload). The shortcuts do nothing while you type in the Style JSON editor. Undoing a brush stroke puts the smoke back to how it was when the stroke began; redo draws the stroke again. Undoing a living stroke stops it, and its smoke fades. *Clear* also clears the history.

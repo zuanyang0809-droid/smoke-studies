@@ -428,13 +428,38 @@ a {
   border-radius: 12px;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transition: transform 0.35s ease, opacity 0.35s ease;
   scrollbar-width: thin;
 }
 
 .panel-collapsed .panel {
   transform: translateX(calc(100% + 16px));
   opacity: 0;
+}
+
+/* After the intro the toggle glows twice, to show where the controls went. */
+.panel-toggle.pulse {
+  animation: toggle-pulse 0.9s ease-out 2;
+}
+
+@keyframes toggle-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(181, 212, 244, 0.55);
+    border-color: rgba(181, 212, 244, 0.7);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgba(181, 212, 244, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    transition: none;
+  }
+
+  .panel-toggle.pulse {
+    animation: toggle-pulse 0.01s 1;
+  }
 }
 
 .panel-title {
