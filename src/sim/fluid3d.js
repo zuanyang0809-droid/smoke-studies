@@ -228,10 +228,12 @@ export class Fluid3D {
     if (!s[0] && !s[1] && !s[2]) return;
     this.flush(); // queued sources are in the old box coordinates
     this.m.shift.uniforms.uShift.value.set(...s);
-    for (const pair of [this.vel, this.scal]) {
-      this.run(this.m.shift, pair[1], { uSrc: pair[0].texture });
-      pair.reverse();
-    }
+    this.passes(() => {
+      for (const pair of [this.vel, this.scal]) {
+        this.run(this.m.shift, pair[1], { uSrc: pair[0].texture });
+        pair.reverse();
+      }
+    });
     this.boxMin.addScaledVector(new THREE.Vector3(...s), this.voxel);
   }
 

@@ -27,9 +27,10 @@ function demosAsSiteRoot() {
 }
 
 // GitHub Pages serves the repo under /<repo-name>/, so the build uses that
-// base path. Override with BASE_PATH if the repository is renamed.
-export default defineConfig(({ command }) => ({
-  base: command === 'build' ? process.env.BASE_PATH || '/smoke-studies/' : '/',
+// base path (and `vite preview` serves the build under it). Override with
+// BASE_PATH if the repository is renamed.
+export default defineConfig(({ command, isPreview }) => ({
+  base: command === 'build' || isPreview ? process.env.BASE_PATH || '/smoke-studies/' : '/',
   plugins: [demosAsSiteRoot()],
   build: {
     outDir: 'dist',

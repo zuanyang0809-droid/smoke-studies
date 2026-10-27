@@ -37,7 +37,7 @@ void main() {
     if (t > tf || T < 0.03) break;
     vec3 p = (ro + rd * t - uBoxMin) / uVoxel;
     vec4 s = sample3(uShade, p);
-    if (s.x < 0.0005) continue;
+    if (s.x < 0.003) continue;
     float al = 1.0 - exp(-s.x * uSigma);
     float w = T * al;
     wsum += w;
