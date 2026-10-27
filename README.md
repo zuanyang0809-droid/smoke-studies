@@ -10,9 +10,9 @@ Hand-drawn style smoke you can paint with, in the spirit of the 2D effects in *A
 
 The series grew out of one observation: **dimensionality changes the perceived material.** The same bands, hue shift, age tint and mottle that read as drawn smoke on a flat plane start to read as something thicker once the shape has a real 3D surface. The 2.5D study sits in between, the way Arcane composites flat 2D FX elements into 3D shots: every card is still a drawing, but the cards occupy space.
 
-Made for *Drawing++* (Zach Lieberman, Harvard GSD, Fall 2026), assignment 3, generative nature.
+Made for *Drawing++* (Zach Lieberman, MIT Media Lab, Fall 2026), assignment 3, generative nature.
 
-**Live demos:** after publishing (see below), at `https://<your-github-username>.github.io/smoke-studies/`.
+**Live demos:** [zuanyang0809-droid.github.io/smoke-studies](https://zuanyang0809-droid.github.io/smoke-studies/)
 
 ## Run locally
 
@@ -116,7 +116,7 @@ Additions over the prototypes: the preset picker and Style JSON editor in the 2D
 2. Click **Publish repository**. Keep the name `smoke-studies` (or see the note below), and untick *Keep this code private* if you want free GitHub Pages hosting.
 3. On github.com, open the repository and go to **Settings → Pages**. Under *Build and deployment*, set **Source: GitHub Actions**.
 4. Go to the **Actions** tab. The first run of *Deploy to GitHub Pages* may have failed because Pages was not enabled yet; open it and choose **Re-run all jobs** (or run the workflow manually). Later pushes from GitHub Desktop deploy automatically.
-5. The site appears at `https://<your-github-username>.github.io/smoke-studies/`.
+5. The site appears at `https://zuanyang0809-droid.github.io/smoke-studies/`.
 
 The workflow (`.github/workflows/deploy.yml`) installs dependencies, runs the tests, builds with the repository name as base path, and deploys `dist/`. If you rename the repository, the deployed site follows automatically; for a local build under another name, run `BASE_PATH=/new-name/ npm run build`.
 
