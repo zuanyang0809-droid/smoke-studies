@@ -43,7 +43,8 @@ export class Embers2D {
 
   add(x, y) {
     if (this.list.length >= this.max) return;
-    this.list.push({ x, y, vx: 0, vy: 0, a: 0, l: 90 + Math.random() * 110, sz: randomSize(), id: this.nextId++ });
+    const sz = randomSize(); // drawn before the lifetime, as in the prototypes
+    this.list.push({ x, y, vx: 0, vy: 0, a: 0, l: 90 + Math.random() * 110, sz, id: this.nextId++ });
   }
 
   /** Try 40 random cells; young, dense smoke may throw off an ember. */
@@ -103,7 +104,8 @@ export class Embers3D {
       if (densityAt) ok = densityAt(px[p], py[p], pz[p]) > 0.16 && Math.random() < 0.15 * embers.amount;
       else ok = pw[p] >= 0.6 && Math.random() < 0.04 * embers.amount;
       if (ok && this.list.length < this.max) {
-        this.list.push({ x: px[p], y: py[p], z: pz[p], vx: 0, vy: 0, vz: 0, a: 0, l: 45 + Math.random() * 60, sz: randomSize(), id: this.nextId++ });
+        const sz = randomSize();
+        this.list.push({ x: px[p], y: py[p], z: pz[p], vx: 0, vy: 0, vz: 0, a: 0, l: 45 + Math.random() * 60, sz, id: this.nextId++ });
       }
     }
   }
