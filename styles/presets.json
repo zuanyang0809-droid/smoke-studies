@@ -1,0 +1,58 @@
+[
+  {
+    "schema": "smoke-style/1",
+    "name": "Incense",
+    "notes": "Thin cigarette-like wisps. Laminar near the source, slow curl higher up.",
+    "emission": { "mode": "brush", "radius": 0.25 },
+    "color": { "base": "#8a8f99", "hueShift": 20, "background": "#1a1d21" },
+    "shading": { "bands": 3, "silhouetteThreshold": 0.11, "shadowThreshold": 0.42, "lightDirection": [-0.5, 0.85, 0.3], "opacity": 0.92 },
+    "texture": { "amount": 0.5, "mottle": true },
+    "motion": { "rise": 0.5, "curl": 0.3, "dissipation": 0.3, "agingFrames": 80 },
+    "form": { "solidity": 0.3 },
+    "layers": { "haze": true, "ageTint": true, "ambientOcclusion": true, "emberCore": false },
+    "embers": { "enabled": false, "amount": 0, "matchSmoke": false },
+    "timing": { "frameStep": 2 }
+  },
+  {
+    "schema": "smoke-style/1",
+    "name": "Arcane smoke bomb",
+    "notes": "From sakugabooru #270219 (Arcane S2): backlit green billows, ochre and blue mottling, haze behind the graphic layer.",
+    "emission": { "mode": "brush", "radius": 0.5 },
+    "color": { "base": "#62905f", "hueShift": 20, "background": "#1a1d21" },
+    "shading": { "bands": 3, "silhouetteThreshold": 0.11, "shadowThreshold": 0.42, "lightDirection": [-0.5, 0.85, 0.3], "opacity": 0.92 },
+    "texture": { "amount": 0.6, "mottle": true },
+    "motion": { "rise": 0.4, "curl": 0.4, "dissipation": 0.4, "agingFrames": 80 },
+    "form": { "solidity": 0.5 },
+    "layers": { "haze": true, "ageTint": true, "ambientOcclusion": true, "emberCore": false },
+    "embers": { "enabled": false, "amount": 0, "matchSmoke": false },
+    "timing": { "frameStep": 2 }
+  },
+  {
+    "schema": "smoke-style/1",
+    "name": "Lavender blast",
+    "notes": "After Nello Fontani's EmberGen tests: lavender smoke, strong hue shift into indigo shadows, warm emissive veins.",
+    "emission": { "mode": "brush", "radius": 0.5 },
+    "color": { "base": "#8b5cc7", "hueShift": 32, "background": "#1a1d21" },
+    "shading": { "bands": 3, "silhouetteThreshold": 0.11, "shadowThreshold": 0.42, "lightDirection": [-0.5, 0.85, 0.3], "opacity": 0.92 },
+    "texture": { "amount": 0.4, "mottle": true },
+    "motion": { "rise": 0.6, "curl": 0.4, "dissipation": 0.4, "agingFrames": 80 },
+    "form": { "solidity": 0.6 },
+    "layers": { "haze": true, "ageTint": true, "ambientOcclusion": true, "emberCore": true },
+    "embers": { "enabled": true, "amount": 0.4, "matchSmoke": false },
+    "timing": { "frameStep": 2 }
+  },
+  {
+    "schema": "smoke-style/1",
+    "name": "Dust",
+    "notes": "Arcane S1 wall collapse (sakugabooru #170624): cream puffs, low rise, no glow.",
+    "emission": { "mode": "brush", "radius": 0.6 },
+    "color": { "base": "#cfbc9c", "hueShift": 12, "background": "#1a1d21" },
+    "shading": { "bands": 3, "silhouetteThreshold": 0.11, "shadowThreshold": 0.42, "lightDirection": [-0.5, 0.85, 0.3], "opacity": 1 },
+    "texture": { "amount": 0.4, "mottle": false },
+    "motion": { "rise": 0.15, "curl": 0.3, "dissipation": 0.5, "agingFrames": 80 },
+    "form": { "solidity": 0.7 },
+    "layers": { "haze": true, "ageTint": false, "ambientOcclusion": true, "emberCore": false },
+    "embers": { "enabled": false, "amount": 0, "matchSmoke": false },
+    "timing": { "frameStep": 2 }
+  }
+]
