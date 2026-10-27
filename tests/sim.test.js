@@ -244,16 +244,18 @@ describe('3D undo helpers', () => {
     expect(e.points).toBe(0);
   });
 
-  it('moves the fluid box only when a point nears a face', () => {
-    const n = [64, 80, 64], home = [32, 25.6, 32];
-    expect(followShift([32, 30, 32], n, home)).toEqual([0, 0, 0]);
-    expect(followShift([2, 30, 70], n, home)).toEqual([-30, 0, 38]);
-    expect(followShift([32, 78, 32], n, home)).toEqual([0, 52, 0]);
+  it('moves the fluid box only as far as a point needs', () => {
+    const n = [64, 96, 64];
+    expect(followShift([32, 30, 32], n)).toEqual([0, 0, 0]);
+    expect(followShift([2, 30, 70], n)).toEqual([-4, 0, 12]);
+    // A stroke high in the box moves it up, so its smoke has room to rise.
+    expect(followShift([32, 70.5, 32], n)).toEqual([0, 11, 0]);
+    expect(followShift([32, 60, 32], n)).toEqual([0, 0, 0]);
   });
 
   it('maps the style to stable fluid units', () => {
     const p = fluidParams3DFromStyle(DEFAULT_STYLE);
-    expect(p.buoyancy).toBeCloseTo(0.01);
+    expect(p.buoyancy).toBeCloseTo(0.006);
     expect(p.cooling).toBeLessThan(1);
     expect(p.agingFrames).toBe(80);
   });

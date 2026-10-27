@@ -35,9 +35,12 @@ void main() {
 
   phi.x *= 0.999 * (1.0 - uAgeDecay * min(1.0, phi.w / uAgingFrames));
   phi.y *= uCool;
-  // Open boundary: smoke fades as it reaches a face of the box.
+  // Open boundary: smoke fades as it reaches a face of the box, and more
+  // gently over the top 12 voxels (as Fluid2D does), so nothing piles up there.
   vec3 e = min(p, uN - p);
   phi.x *= mix(0.8, 1.0, clamp((min(e.x, min(e.y, e.z)) - 0.5) / 3.0, 0.0, 1.0));
+  float fromTop = uN.y - p.y;
+  if (fromTop < 12.0) phi.x *= 0.92 + 0.0066 * fromTop;
   if (phi.x < 1e-4) phi.xy = vec2(0.0);
   outColor = phi;
 }

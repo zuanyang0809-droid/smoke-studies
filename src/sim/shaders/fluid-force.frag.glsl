@@ -9,13 +9,16 @@ uniform float uBuoy;
 uniform float uEps;
 uniform float uTurb;
 uniform float uTime;
+uniform float uAgingFrames;
 
 void main() {
   ivec3 v = voxelAt(gl_FragCoord.xy);
   vec3 u = fetch(uVel, v).xyz + fetch(uSrcV, v).xyz;
   vec4 s = fetch(uScal, v);
-  // Hot smoke rises fast; it cools, slows and spreads.
-  u.y += uBuoy * (s.y + 0.2 * s.x);
+  // Hot smoke rises fast; it cools, slows and spreads. Dense smoke keeps a
+  // little lift only while it is young, so old puffs hang and fade where
+  // they are instead of collecting at the top.
+  u.y += uBuoy * (s.y + 0.3 * s.x * max(0.0, 1.0 - s.w / uAgingFrames));
 
   vec3 g = 0.5 * vec3(
     fetch(uCurl, v + X).w - fetch(uCurl, v - X).w,
@@ -29,7 +32,8 @@ void main() {
     vec3 q = vec3(v) * 0.15 + vec3(0.0, -uTime * 0.6, uTime * 0.2);
     u += uTurb * min(1.0, s.x * 4.0) * (vec3(noise3(q), noise3(q + 17.3), noise3(q + 41.9)) - 0.5);
   }
-  u *= mix(0.96, 1.0, inSmoke);
+  // Drag: calm in clear air, a terminal rise speed inside the smoke.
+  u *= mix(0.96, 0.985, inSmoke);
   // Keep the step stable: at most 3 voxels per step.
   float speed = length(u);
   if (speed > 3.0) u *= 3.0 / speed;

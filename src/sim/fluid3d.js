@@ -1,6 +1,6 @@
 // A real 3D smoke fluid on the GPU (WebGL2 through three.js).
 //
-// The volume is 64 x 80 x 64 voxels stored as a 2D atlas of half-float
+// The volume is 64 x 96 x 64 voxels stored as a 2D atlas of half-float
 // textures (8 x 8 slices), so every solver step is a full-atlas fragment
 // pass. Per step:
 //   sources     brush, living strokes and impulses, splatted as point sprites
@@ -37,35 +37,42 @@ const MAX_IMPULSE_VERTICES = 4096;
 const JACOBI_ITERATIONS = 20;
 const SOURCE_GAIN = 1.6; // particle "amount" -> density added at a splat's center
 const MARGIN = 6; // voxels kept between a stroke and the faces of the box
+const HEADROOM = 36; // voxels kept above a stroke, so its smoke can rise and fade below the top
 
 /** Map normalized Style JSON values to solver units (voxels and steps). */
 export function fluidParams3DFromStyle(style) {
   return {
-    buoyancy: style.motion.rise * 0.02,
+    buoyancy: style.motion.rise * 0.012,
     confinement: style.motion.curl * 0.35,
     turbulence: 0.004 + style.motion.curl * 0.01,
+    // Old smoke fades where it is; slower than Fluid2D's 0.025 because a 3D
+    // puff also thins by spreading in depth.
     ageDecay: style.motion.dissipation * 0.012,
     agingFrames: style.motion.agingFrames || 80,
     expansion: 0.03,
-    cooling: 0.98,
+    cooling: 0.95,
   };
 }
 
 /**
- * Voxel shift that brings a point back inside the box with a margin.
- * Pure, so it is unit tested. Points inside need no shift.
- * @param {number[]} p     point in voxel coordinates
- * @param {number[]} n     box size in voxels
- * @param {number[]} home  where a recentered point should land, in voxels
- * @returns {number[]} whole-voxel shift of the box origin
+ * Smallest whole-voxel shift of the box that keeps a point a margin away
+ * from every face, with headroom above it (y), so the box moves with the
+ * smoke instead of acting as a lid. Moving only as far as needed keeps as
+ * much of the smoke already drawn as possible. Pure, so it is unit tested.
+ * @param {number[]} p  point in voxel coordinates
+ * @param {number[]} n  box size in voxels
+ * @returns {number[]} shift of the box origin, in voxels
  */
-export function followShift(p, n, home, margin = MARGIN) {
-  return p.map((v, i) => (v < margin || v > n[i] - margin ? Math.round(v - home[i]) : 0));
+export function followShift(p, n, margin = MARGIN, headroom = HEADROOM) {
+  return p.map((v, i) => {
+    const hi = n[i] - (i === 1 ? headroom : margin);
+    return v < margin ? Math.floor(v - margin) : v > hi ? Math.ceil(v - hi) : 0;
+  });
 }
 
 export class Fluid3D {
   /** @param {THREE.WebGLRenderer} renderer */
-  constructor(renderer, { nx = 64, ny = 80, nz = 64, tilesX = 8 } = {}) {
+  constructor(renderer, { nx = 64, ny = 96, nz = 64, tilesX = 8 } = {}) {
     this.renderer = renderer;
     this.n = [nx, ny, nz];
     this.voxel = VOXEL;
@@ -74,7 +81,7 @@ export class Fluid3D {
     this.W = nx * tilesX;
     this.H = ny * tilesY;
     // Strokes start near the bottom so rising smoke has room above them.
-    this.home = [nx / 2, ny * 0.32, nz / 2];
+    this.home = [nx / 2, ny * 0.3, nz / 2];
     this.boxMin = new THREE.Vector3(-this.home[0] * VOXEL, -this.home[1] * VOXEL, -this.home[2] * VOXEL);
     this.boxSize = new THREE.Vector3(nx * VOXEL, ny * VOXEL, nz * VOXEL);
     this.frame = 0;
@@ -104,7 +111,7 @@ export class Fluid3D {
     const tex = () => ({ value: null }), num = (v = 0) => ({ value: v });
     this.m = {
       curl: pass(curlFrag, { uVel: tex() }),
-      force: pass(forceFrag, { uVel: tex(), uCurl: tex(), uScal: tex(), uSrcV: tex(), uBuoy: num(), uEps: num(), uTurb: num(), uTime: num() }),
+      force: pass(forceFrag, { uVel: tex(), uCurl: tex(), uScal: tex(), uSrcV: tex(), uBuoy: num(), uEps: num(), uTurb: num(), uTime: num(), uAgingFrames: num(80) }),
       advect: pass(advectFrag, { uVel: tex(), uSrc: tex(), uDt: num(1), uDamp: num(1) }),
       maccormack: pass(maccormackFrag, { uVel: tex(), uPhi: tex(), uFwd: tex(), uBwd: tex(), uSrcS: tex(), uAgeDecay: num(), uAgingFrames: num(80), uCool: num(1) }),
       divergence: pass(divergenceFrag, { uVel: tex(), uScal: tex(), uExpand: num() }),
@@ -224,7 +231,7 @@ export class Fluid3D {
 
   /** Move the box (and the smoke in it) if a stroke point is near or past a face. */
   follow(x, y, z) {
-    const s = followShift(this._voxel(x, y, z), this.n, this.home);
+    const s = followShift(this._voxel(x, y, z), this.n);
     if (!s[0] && !s[1] && !s[2]) return;
     this.flush(); // queued sources are in the old box coordinates
     this.m.shift.uniforms.uShift.value.set(...s);
@@ -321,7 +328,7 @@ export class Fluid3D {
       this.run(m.curl, this.curl, { uVel: vel[0].texture });
       this.run(m.force, vel[1], {
         uVel: vel[0].texture, uCurl: this.curl.texture, uScal: scal[0].texture, uSrcV: this.srcV.texture,
-        uBuoy: P.buoyancy, uEps: P.confinement, uTurb: P.turbulence, uTime: this.frame * 0.01,
+        uBuoy: P.buoyancy, uEps: P.confinement, uTurb: P.turbulence, uTime: this.frame * 0.01, uAgingFrames: P.agingFrames,
       });
       vel.reverse();
       this.run(m.advect, vel[1], { uVel: vel[0].texture, uSrc: vel[0].texture, uDt: 1, uDamp: 0.995 });
