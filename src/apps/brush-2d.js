@@ -6,7 +6,7 @@ import { History } from '../core/history.js';
 import { clone, DEFAULT_STYLE } from '../core/style.js';
 import { SmokeLayer2D, layerParamsFromStyle } from '../sim/layer2d.js';
 import { Emitter2D } from '../sim/emitters.js';
-import { gridForViewport } from '../sim/fluid2d.js';
+import { gridForViewport, gridMismatch } from '../sim/fluid2d.js';
 import { strokeEntry2D } from '../sim/undo2d.js';
 import { toonLookFromStyle } from '../render/toon2d.js';
 import { ToonRendererGL } from '../render/toon-gl.js';
@@ -32,7 +32,11 @@ const view = { width: innerWidth, height: innerHeight, perspective: PERSPECTIVE 
 
 /** The single layer is a card facing the camera that covers the window. */
 const card = { rx: 0, ry: 0, z: 0, layer: null };
-/** A grid with the window's aspect; a new one is made on Clear after a resize. */
+/**
+ * A grid with the window's aspect. After a resize (or when a page loaded
+ * hidden, at 0 x 0, is shown) the grid is rebuilt as soon as it holds no
+ * smoke, so strokes always have the same cell size as at load.
+ */
 function newLayer() {
   const { nx, ny } = gridForViewport(view.width, view.height);
   card.layer = new SmokeLayer2D({ nx, ny, pressureIterations: 16 });
@@ -117,6 +121,15 @@ function resize() {
   view.height = innerHeight;
   renderer.resize(view.width, view.height);
 }
+
+/** Rebuild a grid that no longer fits the window once nothing is drawn on it. */
+function refitGrid() {
+  const layer = card.layer;
+  if (emitter.down || layer.active || layer.strokes.length || !gridMismatch(layer.fluid, view.width, view.height)) return;
+  newLayer();
+  strokeHistory.clear(); // its snapshots belong to the old grid
+  needsUpload = true;
+}
 addEventListener('resize', resize);
 
 // Pointer position in grid cells (the grid spans the window).
@@ -142,6 +155,7 @@ canvas.addEventListener('pointerup', endStroke);
 canvas.addEventListener('pointercancel', endStroke);
 
 function loop() {
+  refitGrid();
   const layer = card.layer;
   const wentIdle = layer.step(params, frame, 1, emitter);
   emitter.endFrame();

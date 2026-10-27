@@ -35,8 +35,8 @@ let redraw = true;
 
 const emitter = new Emitter2D();
 const scheduler = new AdaptiveScheduler({ budgetMs: 12, maxSkip: 2 });
-// Cards share one grid size with the window's aspect, chosen at load.
-const grid = gridForViewport(innerWidth, innerHeight);
+// New cards get a grid with the current window's aspect (see resize).
+let grid = gridForViewport(innerWidth, innerHeight);
 const cards = new CardSpace({
   width: grid.nx * 3,
   height: grid.ny * 3,
@@ -171,6 +171,9 @@ $('clr').onclick = () => {
 };
 
 function resize() {
+  grid = gridForViewport(innerWidth, innerHeight);
+  cards.width = grid.nx * 3;
+  cards.height = grid.ny * 3;
   cards.setViewport(innerWidth, innerHeight);
   view.width = innerWidth;
   view.height = innerHeight;

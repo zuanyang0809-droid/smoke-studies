@@ -83,6 +83,18 @@ describe('CardSpace', () => {
     expect(s.drawList().map((d) => d.card)).toEqual([near, far]);
   });
 
+  it('keeps each card on the grid it was made with after a resize', () => {
+    const s = space();
+    s.setViewport(680, 453);
+    const old = s.newCard();
+    s.width = 600; // a wider grid for cards made from now on
+    s.depth = 50;
+    const card = s.newCard();
+    expect(s.toGrid(680, 0, old).x).toBeCloseTo(160 * (1 + 0.0), 0);
+    expect(card.width).toBe(600);
+    expect(s.toGrid(340, 226.5, card).x).toBeCloseTo(100);
+  });
+
   it('maps the pointer to grid cells, scaled by depth', () => {
     const s = space();
     s.setViewport(680, 453);

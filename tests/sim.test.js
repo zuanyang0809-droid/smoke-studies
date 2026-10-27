@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_STYLE } from '../src/core/style.js';
-import { Fluid2D, fluidParamsFromStyle, gridForViewport } from '../src/sim/fluid2d.js';
+import { Fluid2D, fluidParamsFromStyle, gridForViewport, gridMismatch } from '../src/sim/fluid2d.js';
 import { SmokeLayer2D } from '../src/sim/layer2d.js';
 import { Emitter2D, Emitter3D, replayStroke2D } from '../src/sim/emitters.js';
 import { fluidParams3DFromStyle, followShift } from '../src/sim/fluid3d.js';
@@ -124,6 +124,20 @@ describe('2D grid helpers', () => {
     expect(nx * ny).toBeGreaterThan(30000);
     expect(nx * ny).toBeLessThan(34000);
     expect(gridForViewport(10, 2000)).toEqual({ nx: 89, ny: 356 }); // aspect clamped to 1:4
+  });
+
+  it('falls back to the prototype grid for a hidden (0 x 0) window', () => {
+    expect(gridForViewport(0, 0)).toEqual({ nx: 160, ny: 107 });
+    expect(gridForViewport(800, 0)).toEqual({ nx: 160, ny: 107 });
+  });
+
+  it('notices when a grid no longer fits the window', () => {
+    // A page loaded hidden or narrow keeps that grid until it is refit.
+    const f = new Fluid2D(gridForViewport(0, 0));
+    expect(gridMismatch(f, 800, 600)).toBe(true);
+    const g = new Fluid2D(gridForViewport(800, 600));
+    expect(gridMismatch(g, 800, 600)).toBe(false);
+    expect(gridMismatch(g, 300, 1000)).toBe(true);
   });
 
   it('restores a snapshot exactly, including color and bounds', () => {

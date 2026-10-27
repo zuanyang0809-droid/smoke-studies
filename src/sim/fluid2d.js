@@ -20,9 +20,17 @@ export const GRID_H = 107;
  * so smoke can fill the whole window at a fixed simulation cost.
  */
 export function gridForViewport(width, height, cells = 32000) {
+  // A hidden page can report a 0 x 0 window; fall back to the prototypes' grid.
+  if (!(width > 0 && height > 0)) return { nx: GRID_W, ny: GRID_H };
   const aspect = Math.min(4, Math.max(0.25, width / height));
   const nx = Math.max(40, Math.round(Math.sqrt(cells * aspect)));
   return { nx, ny: Math.max(40, Math.round(nx / aspect)) };
+}
+
+/** True when a grid no longer matches the viewport (the window was resized or shown). */
+export function gridMismatch(fluid, width, height, cells) {
+  const g = gridForViewport(width, height, cells);
+  return g.nx !== fluid.nx || g.ny !== fluid.ny;
 }
 
 // Fields that make up the state an undo snapshot restores.

@@ -127,7 +127,8 @@ export class CardSpace {
 
     const layer = this.createLayer();
     layer.fluid.noiseOffset = this.rx * 0.01 + this.ry * 0.013;
-    const card = { id: this.nextId++, rx: this.rx, ry: this.ry, z: this.depth, layer, lastRender: 0 };
+    // The grid size is kept per card: cards made after a resize use a new one.
+    const card = { id: this.nextId++, rx: this.rx, ry: this.ry, z: this.depth, width: this.width, height: this.height, layer, lastRender: 0 };
     this.cards.push(card);
     return card;
   }
@@ -173,6 +174,6 @@ export class CardSpace {
     const k = (this.perspective - card.z) / this.perspective;
     const lx = (x - this.cw / 2) * k + this.cw / 2;
     const ly = (y - this.ch / 2) * k + this.ch / 2;
-    return { x: (lx * this.width) / this.cw / this.cellSize, y: (ly * this.height) / this.ch / this.cellSize };
+    return { x: (lx * card.width) / this.cw / this.cellSize, y: (ly * card.height) / this.ch / this.cellSize };
   }
 }
