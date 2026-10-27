@@ -558,3 +558,19 @@ a {
 .panel .saves {
   flex: none;
 }
+
+/* Color chips keep their shape inside the panel, whose button rule would
+   otherwise stretch them: fixed size, no padding, never grown or shrunk. */
+.panel .chip {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  aspect-ratio: 1;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.panel .palette-swatches {
+  grid-auto-rows: 16px;
+}
