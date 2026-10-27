@@ -14,6 +14,7 @@ import { cardMatrix, PERSPECTIVE } from '../render/card-space.js';
 import { PalettePanel } from '../ui/palette.js';
 import { mountStyleUI } from '../ui/controls.js';
 import { mountPanel } from '../ui/panel.js';
+import { mountBackground } from '../ui/background.js';
 import { $, toggleGroup } from '../ui/dom.js';
 
 const HINTS = {
@@ -79,6 +80,7 @@ function setMode(m) {
 function loadStyle(s) {
   style = s;
   ui.sync();
+  photo.sync();
   setMode(style.emission.mode);
   palette.setColor(style.color.base, true);
 }
@@ -87,9 +89,21 @@ const ui = mountStyleUI({
   getStyle: () => style,
   onChange() {
     applyStyle();
+    photo.sync(); // the background color shows around a contained photo
     ui.refresh();
   },
   onLoad: loadStyle,
+});
+
+// A photo to paint over; Clear and undo leave it alone.
+const photo = mountBackground({
+  surface: canvas,
+  getStyle: () => style,
+  onPick: (hex) => palette.setColor(hex, true),
+  onChange() {
+    renderer.transparent = photo.layer.hasImage;
+    ui.refresh();
+  },
 });
 
 // Undo / redo, one stroke at a time.

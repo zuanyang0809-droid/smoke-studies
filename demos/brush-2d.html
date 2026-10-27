@@ -8,6 +8,7 @@
 </head>
 <body class="app">
 <h1 class="sr-only">Stylized smoke drawing tool with hue-shift shading, layered look, and soft drifting embers; brush and living-stroke modes, color palette with history and saved effects.</h1>
+<canvas id="bg" class="surface bg" aria-hidden="true"></canvas>
 <canvas id="gl" class="surface"></canvas>
 <div id="nogl" class="notice">This study needs WebGL2.</div>
 <a class="back" href="./">← Smoke Studies</a>
@@ -26,6 +27,7 @@
     </div>
   </div>
   <div id="palette" class="panel-section"><span class="section-label">Color</span></div>
+  <div id="bg-panel" class="panel-section"></div>
   <div id="layers" class="panel-section layers"></div>
   <div id="sliders" class="panel-section sliders"></div>
   <div id="style-panel" class="panel-section"></div>

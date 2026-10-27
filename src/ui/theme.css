@@ -574,3 +574,23 @@ a {
 .panel .palette-swatches {
   grid-auto-rows: 16px;
 }
+
+/* Imported photo: its own canvas under the drawing surface */
+.surface.bg {
+  display: none;
+  pointer-events: none;
+}
+
+.bg-loaded {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bg-thumb {
+  width: 64px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 0.5px solid var(--border-strong);
+}

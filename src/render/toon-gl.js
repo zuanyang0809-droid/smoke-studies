@@ -25,7 +25,8 @@ export class ToonRendererGL {
   /** @param {HTMLCanvasElement} canvas */
   constructor(canvas) {
     this.canvas = canvas;
-    const gl = (this.gl = canvas.getContext('webgl2', { alpha: false, antialias: false, depth: false }));
+    // Alpha so an imported photo can show through (see ui/background.js).
+    const gl = (this.gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false }));
     if (!gl) return;
     this.card = createProgram(gl, cardVert, cardFrag);
     this.ember = createProgram(gl, emberVert, emberFrag);
@@ -54,6 +55,8 @@ export class ToonRendererGL {
     attr('aCore', 3, 6);
     gl.bindVertexArray(null);
     this.dpr = 1;
+    /** Clear to transparent instead of the background color (a photo is behind). */
+    this.transparent = false;
   }
 
   get ok() {
@@ -165,7 +168,8 @@ export class ToonRendererGL {
   draw(list, look, view) {
     const gl = this.gl, bg = look.background;
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-    gl.clearColor(bg[0] / 255, bg[1] / 255, bg[2] / 255, 1);
+    if (this.transparent) gl.clearColor(0, 0, 0, 0);
+    else gl.clearColor(bg[0] / 255, bg[1] / 255, bg[2] / 255, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);

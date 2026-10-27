@@ -8,6 +8,7 @@
 </head>
 <body class="app">
 <h1 class="sr-only">2.5D smoke drawing: each stroke lives on a 2D fluid card placed in 3D space. Rotate the space with Shift + drag, all the way round, and draw again to create a new card facing the new view; cards keep their own position and orientation.</h1>
+<canvas id="bg" class="surface bg" aria-hidden="true"></canvas>
 <canvas id="gl" class="surface"></canvas>
 <div id="nogl" class="notice">This study needs WebGL2.</div>
 <a class="back" href="./">← Smoke Studies</a>
@@ -35,6 +36,7 @@
     <span class="section-label">Color</span>
     <div class="seg"><button data-cm="all" title="Picking a color repaints all smoke">Recolor all</button><button data-cm="next" title="Picking a color only affects the next stroke">Next stroke only</button></div>
   </div>
+  <div id="bg-panel" class="panel-section"></div>
   <div id="layers" class="panel-section layers"></div>
   <div id="sliders" class="panel-section sliders"></div>
   <div id="style-panel" class="panel-section"></div>

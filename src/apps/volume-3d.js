@@ -22,6 +22,7 @@ import { PalettePanel } from '../ui/palette.js';
 import { mountStyleUI } from '../ui/controls.js';
 import { OrbitCamera, attachOrbitInput } from '../ui/orbit.js';
 import { mountPanel } from '../ui/panel.js';
+import { mountBackground } from '../ui/background.js';
 import { $, toggleGroup } from '../ui/dom.js';
 
 const canvas = $('gl'), TICK_MS = 16.6;
@@ -34,7 +35,8 @@ let style = getPresets()[0]; // starts on "Incense", like the prototype
 let view = 'orbit', mode = 'fluid', pal;
 
 // three.js setup: colors are authored in display space, so skip color management.
-const gl = new THREE.WebGLRenderer({ canvas, antialias: false });
+// Alpha so an imported photo can show through (see ui/background.js).
+const gl = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true });
 if (!gl.capabilities.isWebGL2) $('nogl').style.display = 'flex';
 THREE.ColorManagement.enabled = false;
 gl.outputColorSpace = THREE.LinearSRGBColorSpace;
@@ -66,7 +68,8 @@ function applyStyle() {
   pal = screen.setStyle(style);
   volume.setStyle(style);
   smoke.setStyle(style);
-  gl.setClearColor(new THREE.Color(style.color.background));
+  // With a photo behind, clear to transparent; the photo layer draws the color around it.
+  gl.setClearColor(new THREE.Color(style.color.background), photo.layer.hasImage ? 0 : 1);
   emberPoints.object.visible = style.embers.enabled;
 }
 
@@ -133,6 +136,7 @@ const ui = mountStyleUI({
   onLoad(s) {
     style = s;
     syncUI();
+    photo.sync();
     palette.setColor(style.color.base, true);
   },
   overrides: { bu: { min: 0 } },
@@ -143,7 +147,19 @@ function syncUI() {
   ui.sync();
   setModeButton(style.emission.mode);
   applyStyle();
+  photo.sync();
 }
+
+// A screen-fixed photo to paint over: only the smoke orbits. Clear and undo leave it alone.
+const photo = mountBackground({
+  surface: canvas,
+  getStyle: () => style,
+  onPick: (hex) => palette.setColor(hex, true),
+  onChange() {
+    applyStyle();
+    ui.refresh();
+  },
+});
 
 // Undo / redo, one stroke at a time.
 //   living stroke  taken off the emitter (its smoke fades) and put back

@@ -19,6 +19,7 @@ import { CardSpace } from '../render/card-space.js';
 import { PalettePanel } from '../ui/palette.js';
 import { mountStyleUI } from '../ui/controls.js';
 import { mountPanel } from '../ui/panel.js';
+import { mountBackground } from '../ui/background.js';
 import { WorldTilt } from '../ui/tilt.js';
 import { $, toggleGroup } from '../ui/dom.js';
 
@@ -103,6 +104,7 @@ function setColorMode(m) {
 function loadStyle(s) {
   style = s;
   ui.sync();
+  photo.sync();
   setMode(style.emission.mode);
   palette.setColor(style.color.base, true);
 }
@@ -111,9 +113,22 @@ const ui = mountStyleUI({
   getStyle: () => style,
   onChange() {
     applyStyle();
+    photo.sync(); // the background color shows around a contained photo
     ui.refresh();
   },
   onLoad: loadStyle,
+});
+
+// A screen-fixed photo to paint over: only the cards rotate. Clear and undo leave it alone.
+const photo = mountBackground({
+  surface: canvas,
+  getStyle: () => style,
+  onPick: (hex) => palette.setColor(hex, true),
+  onChange() {
+    renderer.transparent = photo.layer.hasImage;
+    redraw = true;
+    ui.refresh();
+  },
 });
 
 // Undo / redo, one stroke at a time. Undoing the stroke that created a card

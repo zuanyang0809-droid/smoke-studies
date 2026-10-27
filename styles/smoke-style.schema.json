@@ -83,6 +83,15 @@
       }
     },
 
+    "backgroundImage": {
+      "type": "object",
+      "description": "How an imported photo sits behind the smoke. The photo itself is never stored in the style.",
+      "properties": {
+        "fit": { "enum": ["cover", "contain"], "default": "cover", "description": "cover fills the window (cropping); contain shows the whole photo, letterboxed on color.background." },
+        "brightness": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.7, "description": "Dims the photo behind the smoke: 1 = as imported, 0 = black." }
+      }
+    },
+
     "timing": {
       "type": "object",
       "properties": {
